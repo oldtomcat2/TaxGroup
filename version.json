@@ -1,0 +1,7 @@
+{
+  "versionCode": 100,
+  "versionName": "1.0.0-beta1",
+  "apkUrl": "https://github.com/oldtomcat2/TaxGroup/releases/download/v1.0.0-beta1/app-debug.apk",
+  "changelog": "初始 Beta 版本\n- 用户登录/注册系统\n- 选题报送、查询、编辑、审核全流程\n- 联动合作（可参与/查询维护）\n- 版本更新检查\n- 古风 UI 设计",
+  "forceUpdate": false
+}

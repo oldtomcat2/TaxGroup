@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- 登录页配色 -->
+    <color name="login_blue_start">#1E88E5</color>
+    <color name="login_blue_end">#1565C0</color>
+    <color name="login_card_bg">#FFFFFF</color>
+    <color name="login_input_bg">#F5F5F5</color>
+    <color name="login_input_stroke">#E0E0E0</color>
+    <color name="login_input_stroke_focused">#1E88E5</color>
+    <color name="login_hint_color">#9E9E9E</color>
+    <color name="login_btn_start">#1E88E5</color>
+    <color name="login_btn_end">#1565C0</color>
+    <color name="login_btn_text">#FFFFFF</color>
+
+    <!-- 古风仙境配色 -->
+    <color name="paper">#FAF7F2</color>
+    <color name="ink">#2A2A2A</color>
+    <color name="ink_soft">#5C5C5C</color>
+    <color name="ink_mute">#9E9E9E</color>
+    <color name="gold">#C8A24F</color>
+    <color name="gold_deep">#A07A2E</color>
+    <color name="gold_pale">#E5C97A</color>
+    <color name="mist_overlay">#B3FAF7F2</color>
+</resources>

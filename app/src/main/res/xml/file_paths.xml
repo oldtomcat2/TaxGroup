@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- DownloadManager 下载到公共下载目录的 APK -->
+    <external-path
+        name="external_download"
+        path="Download/" />
+
+    <!-- 兼容 Android 10+ 范围存储 -->
+    <external-files-path
+        name="external_files"
+        path="Download/" />
+
+    <!-- 应用专属目录 -->
+    <files-path
+        name="files"
+        path="." />
+</paths>

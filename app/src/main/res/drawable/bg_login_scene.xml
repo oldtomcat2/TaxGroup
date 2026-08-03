@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 底层：仙境建筑图 -->
+    <item>
+        <bitmap
+            android:src="@drawable/splash_building"
+            android:gravity="fill" />
+    </item>
+    <!-- 半透明米色蒙版：让前景可读 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/mist_overlay" />
+        </shape>
+    </item>
+</layer-list>

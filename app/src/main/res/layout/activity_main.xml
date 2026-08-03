@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_login_scene"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <!-- Logo -->
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_login_logo"
+        android:contentDescription="Logo" />
+
+    <!-- 主标题：古风金字 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="古楚轩船"
+        android:fontFamily="@font/jhzh"
+        android:textColor="@color/gold"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15"
+        android:layout_marginTop="12dp" />
+
+    <!-- 副标题：淡墨 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="新媒体管理系统"
+        android:textColor="@color/ink_soft"
+        android:textSize="13sp"
+        android:letterSpacing="0.3"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="32dp" />
+
+    <!-- 登录卡片：宣纸白 + 金边 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_login_card"
+        android:orientation="vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="28dp"
+        android:elevation="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="欢迎登录"
+            android:fontFamily="@font/jhzh"
+            android:textColor="@color/ink"
+            android:textSize="20sp"
+            android:letterSpacing="0.2"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 用户名输入框：底部下划线 -->
+        <EditText
+            android:id="@+id/Uname"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_login_input"
+            android:hint="请输入用户名"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/ink_mute"
+            android:textSize="15sp"
+            android:inputType="text"
+            android:maxLines="1"
+            android:imeOptions="actionNext"
+            android:paddingHorizontal="4dp" />
+
+        <!-- 密码输入框：底部下划线 -->
+        <EditText
+            android:id="@+id/Upass"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_login_input"
+            android:hint="请输入密码"
+            android:textColor="@color/ink"
+            android:textColorHint="@color/ink_mute"
+            android:textSize="15sp"
+            android:inputType="textPassword"
+            android:maxLines="1"
+            android:imeOptions="actionDone"
+            android:paddingHorizontal="4dp" />
+
+        <!-- 按钮行 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="28dp">
+
+            <!-- 注册按钮 -->
+            <Button
+                android:id="@+id/btn_register"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_login_btn"
+                android:text="注册"
+                android:textColor="@color/paper"
+                android:textSize="15sp"
+                android:letterSpacing="0.1"
+                android:elevation="2dp"
+                android:stateListAnimator="@null" />
+
+            <View
+                android:layout_width="12dp"
+                android:layout_height="0dp" />
+
+            <!-- 登录按钮 -->
+            <Button
+                android:id="@+id/Bt1"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_login_btn"
+                android:text="登录"
+                android:textColor="@color/paper"
+                android:textSize="15sp"
+                android:letterSpacing="0.1"
+                android:elevation="2dp"
+                android:stateListAnimator="@null" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 页脚 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="© 2026 古楚轩船"
+        android:fontFamily="@font/jhzh"
+        android:textColor="@color/ink_soft"
+        android:textSize="11sp"
+        android:letterSpacing="0.2"
+        android:layout_marginTop="24dp" />
+
+</LinearLayout>

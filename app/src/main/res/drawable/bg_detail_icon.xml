@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 阴影层 -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="#1A237E" />
+        </shape>
+    </item>
+    <!-- 主体层 -->
+    <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp">
+        <shape android:shape="oval">
+            <gradient
+                android:startColor="#5C6BC0"
+                android:endColor="#3949AB"
+                android:angle="270" />
+        </shape>
+    </item>
+</layer-list>

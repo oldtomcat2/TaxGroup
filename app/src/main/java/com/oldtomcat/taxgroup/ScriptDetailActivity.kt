@@ -114,7 +114,7 @@ class ScriptDetailActivity : AppCompatActivity() {
             }
         })
 
-        // 保存按钮 - 已提交模式下暂存到本地；未提交模式下也暂存到本地
+        // 保存按钮 - 未提交模式暂存到本地；已提交模式隐藏
         btnSave.setOnClickListener { saveDraft() }
 
         // 提交按钮 - 已提交模式下 UPDATE；未提交模式下 INSERT
@@ -122,9 +122,9 @@ class ScriptDetailActivity : AppCompatActivity() {
             if (isSubmittedMode) updateScript() else submitScript()
         }
 
-        // 已提交模式：保存按钮文案为“保存修改”（暂存本地）；提交按钮文案为“提交修改”（入库）
+        // 已提交模式：隐藏保存按钮，仅保留“提交修改”入库
         if (isSubmittedMode) {
-            btnSave.text = "保存修改"
+            btnSave.visibility = View.GONE
             btnSubmit.text = "提交修改"
         }
 

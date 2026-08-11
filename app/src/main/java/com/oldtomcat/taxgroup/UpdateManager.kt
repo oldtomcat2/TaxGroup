@@ -86,13 +86,16 @@ object UpdateManager {
     private fun fetchVersionInfo(): VersionInfo? {
         val url = URL(VERSION_JSON_URL)
         val conn = url.openConnection() as HttpURLConnection
-        conn.connectTimeout = 10000
-        conn.readTimeout = 10000
+        conn.connectTimeout = 15000
+        conn.readTimeout = 15000
         conn.requestMethod = "GET"
+        conn.setRequestProperty("User-Agent", "TaxGroup-Android/1.0")
+        conn.setRequestProperty("Accept", "application/json")
 
         val code = conn.responseCode
         if (code !in 200..299) {
             conn.disconnect()
+            android.util.Log.w("UpdateManager", "version.json HTTP $code")
             // JSON 拉不到时回退到默认 APK URL
             return VersionInfo(
                 versionCode = 0,
@@ -106,11 +109,15 @@ object UpdateManager {
             .use { it.readText() }
         conn.disconnect()
 
+        android.util.Log.d("UpdateManager", "version.json content=$text")
+
         // 简单 JSON 解析（不引入额外依赖）
         val versionCode = extractJsonInt(text, "versionCode")
         val versionName = extractJsonString(text, "versionName")
         val apkUrl = extractJsonString(text, "apkUrl")
         val changelog = extractJsonString(text, "changelog")
+
+        android.util.Log.d("UpdateManager", "parsed: code=$versionCode name=$versionName apkUrl=$apkUrl")
 
         return VersionInfo(
             versionCode = versionCode,

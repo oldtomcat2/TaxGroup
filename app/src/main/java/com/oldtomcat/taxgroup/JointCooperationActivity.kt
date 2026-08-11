@@ -28,7 +28,7 @@ data class JointTopicItem(
 
 // 鍒嗙粍甯冨眬鐨勫钩鍖栬嚜瀹氫箟绫?
 sealed class ListEntry {
-    data class DepartmentHeader(val depName: String, val count: Int, val isExpanded: Boolean) : ListEntry()
+    data class DepartmentHeader(val depName: String, val count: Int) : ListEntry()
     data class Topic(val item: JointTopicItem) : ListEntry()
 }
 
@@ -46,8 +46,6 @@ class JointCooperationActivity : AppCompatActivity() {
 
     // 瀛樺偍鍒嗙粍鍚庣殑“扁平化”鍒楄〃
     private val flatList = mutableListOf<ListEntry>()
-    // 璁板綍姣忎釜閮ㄩ棬鐨勫睍寮€/鏀剁缉鐘舵€?Map<depName, Boolean>
-    private val expandState = mutableMapOf<String, Boolean>()
 
     @Volatile
     private var isLoading = false
@@ -171,7 +169,7 @@ class JointCooperationActivity : AppCompatActivity() {
                         val (idDep, dateJoinEnd) = pair
 
                         // 鍒嗙粍 */
-                        val escIdCom = idCom.replace("'", "''")
+//                        val escIdCom = idCom.replace("'", "''")
                         val escIdCom = idCom.replace("'", "''")
                         val joinSql = "SELECT 1 FROM joined_topical WHERE id_com = '$escIdCom' AND id_joined_dep = '$escLoginDep'"
                         val joinRs = conn.query(joinSql)
@@ -211,11 +209,8 @@ class JointCooperationActivity : AppCompatActivity() {
                         .toSortedMap()
                     val newFlatList = mutableListOf<ListEntry>()
                     for ((depName, items) in grouped) {
-                        val isExpanded = expandState.getOrDefault(depName, true)
-                        newFlatList.add(ListEntry.DepartmentHeader(depName, items.size, isExpanded))
-                        if (isExpanded) {
-                            for (it in items) newFlatList.add(ListEntry.Topic(it))
-                        }
+                        newFlatList.add(ListEntry.DepartmentHeader(depName, items.size))
+                        for (it in items) newFlatList.add(ListEntry.Topic(it))
                     }
 
                     runOnUiThread {
@@ -231,8 +226,7 @@ class JointCooperationActivity : AppCompatActivity() {
                             rvTopics.visibility = View.VISIBLE
                             tvEmpty.visibility = View.GONE
                             rvTopics.adapter = JointTopicAdapter(flatList, currentMode,
-                                onTopicClick = { item -> onItemClick(item) },
-                                onHeaderClick = { depName, expanded -> toggleDep(depName, expanded) }
+                                onTopicClick = { item -> onItemClick(item) }
                             )
                         }
                         isLoading = false
@@ -253,25 +247,7 @@ class JointCooperationActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun toggleDep(depName: String, currentExpanded: Boolean) {
-        val newState = !currentExpanded
-        expandState[depName] = newState
-        // 閲嶅缓 flatList
-        val headerIdx = flatList.indexOfFirst { it is ListEntry.DepartmentHeader && it.depName == depName }
-        if (headerIdx < 0) return
-        val header = flatList[headerIdx] as ListEntry.DepartmentHeader
-        val newList = mutableListOf<ListEntry>()
-        newList.add(header.copy(isExpanded = newState))
-        if (newState) {
-            // 插入该部门下的选题
-            for (i in headerIdx + 1 until flatList.size) {
-                if (flatList[i] is ListEntry.Topic) newList.add(flatList[i]) else break
-            }
-        }
-        flatList.clear()
-        flatList.addAll(newList)
-        rvTopics.adapter?.notifyDataSetChanged()
-    }
+    
 
     private fun getTodayYyMMdd(): String {
         val sdf = SimpleDateFormat("yyMMdd", Locale.getDefault())
@@ -290,8 +266,7 @@ class JointCooperationActivity : AppCompatActivity() {
 class JointTopicAdapter(
     private val items: List<ListEntry>,
     private val mode: Int,
-    private val onTopicClick: (JointTopicItem) -> Unit,
-    private val onHeaderClick: (depName: String, currentExpanded: Boolean) -> Unit
+    private val onTopicClick: (JointTopicItem) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -336,8 +311,8 @@ class JointTopicAdapter(
                 val h = holder as HeaderVH
                 h.tvName.text = "${entry.depName}"
                 h.tvCount.text = "${entry.count} 条"
-                h.ivExpand.rotation = if (entry.isExpanded) 45f else 0f
-                h.card.setOnClickListener { onHeaderClick(entry.depName, entry.isExpanded) }
+                h.ivExpand.rotation = 0f
+                h.card.setOnClickListener(null)
             }
             is ListEntry.Topic -> {
                 val item = entry.item

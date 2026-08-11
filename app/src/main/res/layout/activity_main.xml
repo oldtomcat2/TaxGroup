@@ -142,4 +142,13 @@
         android:letterSpacing="0.2"
         android:layout_marginTop="24dp" />
 
+    <!-- 版本号显示 -->
+    <TextView
+        android:id="@+id/tv_app_version"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textSize="12sp"
+        android:textColor="#999999" />
+
 </LinearLayout>

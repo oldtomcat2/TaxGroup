@@ -26,9 +26,8 @@ class MainActivity : AppCompatActivity() {
         bt1 = findViewById(R.id.Bt1)
         btn_register = findViewById(R.id.btn_register)
 
-        // 显示当前版本号（从 BuildConfig 读取，随版本号变化自动同步）
-        val tvVersion = findViewById<TextView>(R.id.tv_app_version)
-        tvVersion.text = "v${BuildConfig.VERSION_NAME}"
+        // 显示当前版本号（从 BuildConfig 读取）
+        findViewById<TextView>(R.id.tv_app_version).text = "v${BuildConfig.VERSION_NAME}"
 
         // 默认填充：用户名为上次成功登录的用户名，密码留空
         val lastUsername = sp.getString("last_username", "") ?: ""

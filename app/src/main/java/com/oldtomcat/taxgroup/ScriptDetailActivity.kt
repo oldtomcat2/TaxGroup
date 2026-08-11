@@ -114,18 +114,18 @@ class ScriptDetailActivity : AppCompatActivity() {
             }
         })
 
-        // 保存按钮 - 已提交模式下走 UPDATE；未提交模式下暂存到本地
-        btnSave.setOnClickListener {
-            if (isSubmittedMode) updateScript() else saveDraft()
+        // 保存按钮 - 已提交模式下暂存到本地；未提交模式下也暂存到本地
+        btnSave.setOnClickListener { saveDraft() }
+
+        // 提交按钮 - 已提交模式下 UPDATE；未提交模式下 INSERT
+        btnSubmit.setOnClickListener {
+            if (isSubmittedMode) updateScript() else submitScript()
         }
 
-        // 提交按钮 - 插入 topical_detail（仅未提交模式可见）
-        btnSubmit.setOnClickListener { submitScript() }
-
-        // 已提交模式：隐藏提交按钮（只允许改 script），保存按钮改为“保存修改”
+        // 已提交模式：保存按钮文案为“保存修改”（暂存本地）；提交按钮文案为“提交修改”（入库）
         if (isSubmittedMode) {
-            btnSubmit.visibility = View.GONE
             btnSave.text = "保存修改"
+            btnSubmit.text = "提交修改"
         }
 
         // 加载数据
@@ -202,8 +202,8 @@ class ScriptDetailActivity : AppCompatActivity() {
         prefs.edit().putString("$KEY_SCRIPT_PREFIX$idJoinedList", script).apply()
 
         AlertDialog.Builder(this)
-            .setTitle("保存成功")
-            .setMessage("脚本内容已暂存到本地")
+            .setTitle("提示")
+            .setMessage("成功保存在本地手机，暂未提交")
             .setPositiveButton("确定", null)
             .show()
     }
@@ -303,7 +303,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         }.start()
     }
 
-    // 已提交模式下的“保存修改”逻辑：UPDATE topical_detail.script
+    // 已提交模式下的“提交修改”逻辑：UPDATE topical_detail.script
     private fun updateScript() {
         val script = etScript.text.toString().trim()
         if (script.isEmpty()) {
@@ -333,9 +333,14 @@ class ScriptDetailActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     isLoading = false
                     existingScript = script
+
+                    // 清除暂存
+                    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    prefs.edit().remove("$KEY_SCRIPT_PREFIX$idJoinedList").apply()
+
                     AlertDialog.Builder(this@ScriptDetailActivity)
-                        .setTitle("保存成功")
-                        .setMessage("脚本已修改")
+                        .setTitle("提交成功")
+                        .setMessage("脚本已修改并提交到数据库")
                         .setPositiveButton("确定", null)
                         .show()
                 }
@@ -344,7 +349,7 @@ class ScriptDetailActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     isLoading = false
                     AlertDialog.Builder(this@ScriptDetailActivity)
-                        .setTitle("保存失败")
+                        .setTitle("提交失败")
                         .setMessage("${e.javaClass.simpleName}\n${e.message}")
                         .setPositiveButton("确定", null)
                         .show()

@@ -114,12 +114,12 @@ class JointCooperationActivity : AppCompatActivity() {
             MODE_AVAILABLE -> {
                 btnAvailable.setBackgroundResource(R.drawable.bg_topic_btn_blue)
                 btnJoined.setBackgroundResource(R.drawable.bg_topic_btn_gray)
-                tvListTitle.text = "鍙ゅ弬涓洪€夐鍒楄〃"
+                tvListTitle.text = "可参与选题列表"
             }
             MODE_JOINED -> {
                 btnAvailable.setBackgroundResource(R.drawable.bg_topic_btn_gray)
                 btnJoined.setBackgroundResource(R.drawable.bg_topic_btn_blue)
-                tvListTitle.text = "鏌ヨ缁存姢鍒楄〃"
+                tvListTitle.text = "查询维护列表"
             }
         }
     }
@@ -161,7 +161,7 @@ class JointCooperationActivity : AppCompatActivity() {
                         return@withConnection
                     }
 
-                    // 2. 閮ㄩ棬鍚嶆槧灏勶紙缂撳瓨閬垮厤閮ㄩ棬琛嶅璋冪敤 SQL锛?
+                    // 2. 部门名映射(缓存避免部门重复调用SQL)
                     val escLoginDep = MyApp.loginDeaprt.replace("'", "''")
                     val joinedList = mutableListOf<JointTopicItem>()
                     val availableList = mutableListOf<JointTopicItem>()
@@ -171,6 +171,7 @@ class JointCooperationActivity : AppCompatActivity() {
                         val (idDep, dateJoinEnd) = pair
 
                         // 鍒嗙粍 */
+                        val escIdCom = idCom.replace("'", "''")
                         val escIdCom = idCom.replace("'", "''")
                         val joinSql = "SELECT 1 FROM joined_topical WHERE id_com = '$escIdCom' AND id_joined_dep = '$escLoginDep'"
                         val joinRs = conn.query(joinSql)
@@ -240,11 +241,11 @@ class JointCooperationActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 runOnUiThread {
                     progressBar.visibility = View.GONE
-                    tvCount.text = "鏌ヨ鍑洪敊"
+                    tvCount.text = "查询出错"
                     AlertDialog.Builder(this@JointCooperationActivity)
-                        .setTitle("閿欒")
+                        .setTitle("错误")
                         .setMessage("${e.javaClass.simpleName}: ${e.message}")
-                        .setPositiveButton("纭畦", null)
+                        .setPositiveButton("确定", null)
                         .show()
                     isLoading = false
                 }
@@ -262,7 +263,7 @@ class JointCooperationActivity : AppCompatActivity() {
         val newList = mutableListOf<ListEntry>()
         newList.add(header.copy(isExpanded = newState))
         if (newState) {
-            // 鎻掑叆璇ラ儴闂ㄤ笅鐨勯€夐
+            // 插入该部门下的选题
             for (i in headerIdx + 1 until flatList.size) {
                 if (flatList[i] is ListEntry.Topic) newList.add(flatList[i]) else break
             }
@@ -280,7 +281,7 @@ class JointCooperationActivity : AppCompatActivity() {
     private fun onItemClick(item: JointTopicItem) {
         val intent = android.content.Intent(this, JointDetailActivity::class.java)
         intent.putExtra("id_com", item.idCom)
-        intent.putExtra("mode", currentMode) // 0=鍙ゅ弬涓? 1=鏌ヨ缁存姢
+        intent.putExtra("mode", currentMode) // 0=可参与 1=查询维护
         startActivity(intent)
     }
 }
@@ -298,10 +299,11 @@ class JointTopicAdapter(
         const val TYPE_TOPIC = 1
     }
 
-    inner class HeaderVH(val card: MaterialCardView) : RecyclerView.ViewHolder(card) {
-        val tvName: TextView = card.findViewById(R.id.tv_department_name)
-        val tvCount: TextView = card.findViewById(R.id.tv_count)
-        val ivExpand: ImageView = card.findViewById(R.id.iv_expand)
+    inner class HeaderVH(val root: android.widget.LinearLayout) : RecyclerView.ViewHolder(root) {
+        val tvName: TextView = root.findViewById(R.id.tv_department_name)
+        val tvCount: TextView = root.findViewById(R.id.tv_count)
+        val ivExpand: ImageView = root.findViewById(R.id.iv_expand)
+        val card: MaterialCardView = root.findViewById(R.id.card_department)
     }
 
     inner class TopicVH(val card: MaterialCardView) : RecyclerView.ViewHolder(card) {
@@ -321,7 +323,7 @@ class JointTopicAdapter(
         val inflater = LayoutInflater.from(parent.context)
         if (viewType == TYPE_HEADER) {
             val v = inflater.inflate(R.layout.item_department_group, parent, false)
-            return HeaderVH(v.findViewById(R.id.card_department))
+            return HeaderVH(v as android.widget.LinearLayout)
         } else {
             val v = inflater.inflate(R.layout.item_joint_topic, parent, false)
             return TopicVH(v as MaterialCardView)
@@ -349,7 +351,7 @@ class JointTopicAdapter(
                 } else {
                     h.llDeadline.visibility = View.GONE
                 }
-                h.card.findViewById<MaterialCardView>(R.id.card_root).setOnClickListener {
+                h.card.setOnClickListener {
                     onTopicClick(item)
                 }
             }

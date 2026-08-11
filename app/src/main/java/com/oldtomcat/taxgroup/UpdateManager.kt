@@ -38,7 +38,7 @@ object UpdateManager {
 
     // 2. APK 下载 URL（也可以从 version.json 中读取）
     private const val DEFAULT_APK_URL =
-        "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta2/app-debug.apk"
+        "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta3/app-debug.apk"
 
     // 3. APK 文件名（下载保存用）
     private const val APK_FILE_NAME = "TaxGroup-update.apk"

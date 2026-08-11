@@ -1,7 +1,7 @@
 {
-  "versionCode": 101,
-  "versionName": "1.0.0-beta2",
-  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta2/app-debug.apk",
-  "changelog": "beta2 更新：\n- 新增脚本编辑功能（草稿暂存+提交）\n- 选题编辑/审核页面加只读复选框\n- 审核详情自动加入联动合作\n- 登录页底部显示当前版本号",
+  "versionCode": 102,
+  "versionName": "1.0.0-beta3",
+  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta3/app-debug.apk",
+  "changelog": "v1.0.0-beta3 更新：\n- 已提交/未提交脚本均可进入详情页编辑\n- 已提交项仅保留「提交修改」按钮\n- 登录页显示当前版本号\n- 脚本编辑功能优化",
   "forceUpdate": false
 }

@@ -8,6 +8,8 @@ class MyApp : Application() {
         var loginName: String = ""
         var loginDeaprt: String = ""
         var loginDeaprtName: String = ""
+        var loginDepLevel: Int = 0
+
     }
 
     override fun onCreate() {

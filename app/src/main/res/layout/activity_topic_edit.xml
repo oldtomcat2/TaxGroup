@@ -215,6 +215,73 @@
                     android:inputType="textMultiLine" />
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 重要选题（只读复选框） -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="重要选题"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="6dp"
+                android:layout_marginTop="4dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="1dp"
+                app:cardBackgroundColor="#FFFFFF"
+                android:layout_marginBottom="4dp">
+
+                <LinearLayout
+                    android:id="@+id/ll_important_types"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="加载中..."
+                        android:textSize="13sp"
+                        android:textColor="#999999" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 选题方向（只读复选框） -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="选题方向"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginBottom="6dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="1dp"
+                app:cardBackgroundColor="#FFFFFF"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:id="@+id/ll_direction_types"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="加载中..."
+                        android:textSize="13sp"
+                        android:textColor="#999999" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 内容（可编辑） -->
             <TextView
                 android:layout_width="wrap_content"

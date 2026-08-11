@@ -152,46 +152,26 @@ class MenuAdapter(private val menus: List<MenuItem>) :
                     val intent = android.content.Intent(ctx, JointCooperationActivity::class.java)
                     ctx.startActivity(intent)
                 }
+                "脚本编辑" -> {
+                    val intent = android.content.Intent(ctx, ScriptEditActivity::class.java)
+                    ctx.startActivity(intent)
+                }
                 "版本更新" -> {
                     UpdateManager.checkForUpdate(ctx)
                 }
                 "选题审核" -> {
-                    // 权限检查：部门 level 必须为 1
-                    Thread {
-                        try {
-                            Db.withConnection { conn ->
-                                val rs = conn.query(
-                                    "SELECT level FROM Department WHERE id_dep='${MyApp.loginDeaprt}'"
-                                )
-                                val rows = rs.toList()
-                                val level = if (rows.isNotEmpty()) {
-                                    rows[0].get(0).toString().toIntOrNull() ?: 0
-                                } else {
-                                    0
-                                }
-                                (ctx as? HomeMenuActivity)?.runOnUiThread {
-                                    if (level == 1) {
-                                        val intent = android.content.Intent(ctx, TopicAuditActivity::class.java)
-                                        ctx.startActivity(intent)
-                                    } else {
-                                        AlertDialog.Builder(ctx)
-                                            .setTitle("权限不足")
-                                            .setMessage("您的权限不够！")
-                                            .setPositiveButton("确定", null)
-                                            .show()
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            (ctx as? HomeMenuActivity)?.runOnUiThread {
-                                AlertDialog.Builder(ctx)
-                                    .setTitle("错误")
-                                    .setMessage("权限检查失败：${e.message}")
-                                    .setPositiveButton("确定", null)
-                                    .show()
-                            }
-                        }
-                    }.start()
+                    // 权限检查：部门 level 必须为 1（已登录时从 MyApp.loginDepLevel 取）
+                    val level = MyApp.loginDepLevel
+                    if (level == 1) {
+                        val intent = android.content.Intent(ctx, TopicAuditActivity::class.java)
+                        ctx.startActivity(intent)
+                    } else {
+                        AlertDialog.Builder(ctx)
+                            .setTitle("权限不足")
+                            .setMessage("您的权限不够！")
+                            .setPositiveButton("确定", null)
+                            .show()
+                    }
                 }
                 else -> {
                     AlertDialog.Builder(ctx)

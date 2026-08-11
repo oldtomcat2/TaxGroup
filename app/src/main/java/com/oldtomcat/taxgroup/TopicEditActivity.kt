@@ -19,6 +19,8 @@ class TopicEditActivity : AppCompatActivity() {
     private lateinit var tvAuditStatus: TextView
     private lateinit var llRejectMemo: LinearLayout
     private lateinit var tvRejectMemo: TextView
+    private lateinit var llImportantTypes: LinearLayout
+    private lateinit var llDirectionTypes: LinearLayout
     private lateinit var btnSubmit: Button
     private lateinit var btnDelete: Button
     private lateinit var btnBackBottom: Button
@@ -26,9 +28,10 @@ class TopicEditActivity : AppCompatActivity() {
 
     private var idCom: String = ""
     private var idUser: String = ""  // 选题作者 id
-    private var vet: Int = 0  // 当前审核状态：0未审核 1已审核 2未通过
+    private var idDep: String = ""  // 选题发起部门 id
+    private var vet: Int = 0  // 当前审核状态:0未审核 1已审核 2未通过
 
-    // 查询锁：防并发访问数据库（HTTP）
+    // 查询锁:防并发访问数据库(HTTP)
     @Volatile
     private var isLoading = false
 
@@ -49,7 +52,7 @@ class TopicEditActivity : AppCompatActivity() {
         idCom = intent.getStringExtra("id_com") ?: ""
 //        idCom = "2607201608080001"
         if (idCom.isEmpty()) {
-            Toast.makeText(this, "参数错误：未指定记录", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "参数错误:未指定记录", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -64,6 +67,8 @@ class TopicEditActivity : AppCompatActivity() {
         tvAuditStatus = findViewById(R.id.tv_audit_status)
         llRejectMemo = findViewById(R.id.ll_reject_memo)
         tvRejectMemo = findViewById(R.id.tv_reject_memo)
+        llImportantTypes = findViewById(R.id.ll_important_types)
+        llDirectionTypes = findViewById(R.id.ll_direction_types)
         btnSubmit = findViewById(R.id.btn_submit)
         btnDelete = findViewById(R.id.btn_delete)
         btnBackBottom = findViewById(R.id.btn_back_bottom)
@@ -102,7 +107,7 @@ class TopicEditActivity : AppCompatActivity() {
             try {
                 Db.withConnection { conn ->
                     val sql = "SELECT id_com, com_title, com_summary, vet, reject_memo, b.id_dep, " +
-                        "name_user, a.last_mod_user, a.last_mod_date " +
+                        "name_user, a.last_mod_user, a.last_mod_date, a.id_dep " +
                         "FROM commission_summary a, User b " +
                         "WHERE (a.id_user = b.id_user) AND a.id_com = '$idCom'"
                     val rs = conn.query(sql)
@@ -113,7 +118,7 @@ class TopicEditActivity : AppCompatActivity() {
                             progressBar.visibility = View.GONE
                             AlertDialog.Builder(this@TopicEditActivity)
                                 .setTitle("提示")
-                                .setMessage("未找到该记录（id_com=$idCom）")
+                                .setMessage("未找到该记录(id_com=$idCom)")
                                 .setPositiveButton("确定") { _, _ -> finish() }
                                 .show()
                             isLoading = false
@@ -131,8 +136,11 @@ class TopicEditActivity : AppCompatActivity() {
                     val nameUser = row.get(6).toString().removeSurrounding("[", "]")
                     val lastModUser = row.get(7).toString().removeSurrounding("[", "]")
                     val lastModDate = row.get(8).toString().removeSurrounding("[", "]")
+                    val idDep = row.get(9).toString().removeSurrounding("[", "]")
+                    this.idDep = idDep
+                    this.idDep = idDep
 
-                    // 最后修改人：用 last_mod_user 关联 User 表查 name_user
+                    // 最后修改人:用 last_mod_user 关联 User 表查 name_user
                     var modUserName = "无"
                     if (lastModUser.isNotEmpty() && lastModUser != "null") {
                         try {
@@ -142,11 +150,11 @@ class TopicEditActivity : AppCompatActivity() {
                                 modUserName = rows2[0].get(0).toString().removeSurrounding("[", "]")
                             }
                         } catch (_: Exception) {
-                            // 忽略，保持“无”
+                            // 忽略,保持"无"
                         }
                     }
 
-                    // 最后修改日期：取 月(第3-4位) + 日(第5-6位)，格式 MM月dd日
+                    // 最后修改日期:取 月(第3-4位) + 日(第5-6位),格式 MM月dd日
                     val modDateText = if (lastModDate.isNotEmpty() && lastModDate != "null") {
                         val s = lastModDate.padStart(8, '0')
                         val month = s.substring(2, 4)
@@ -176,6 +184,44 @@ class TopicEditActivity : AppCompatActivity() {
 
                     val hasMemo = rejectMemo.isNotEmpty() && rejectMemo != "null" && rejectMemo != "[]"
 
+                    // 加载选题类型(只读展示):
+                    // 1. 从 joined_topical 取 type_list
+                    // 2. 从 topical_type 按 level=1/2 分别取选项
+                    // 3. type_list 单字符匹配 topical_type,勾选默认项
+                    var typeListStr = ""
+                    val typeListL1: MutableList<Pair<String, String>> = mutableListOf()
+                    val typeListL2: MutableList<Pair<String, String>> = mutableListOf()
+                    try {
+     //                   var ss = "SELECT type_list FROM joined_topical WHERE id_com = '$idCom' AND id_joined_dep = '${MyApp.loginDeaprt}'"
+                        val rsJt = conn.query(
+                            "SELECT type_list FROM joined_topical WHERE id_com = '$idCom' AND id_joined_dep = '$idDep'"
+                        )
+
+                        val jtRows = rsJt.toList()
+                        if (jtRows.isNotEmpty()) {
+                            typeListStr = jtRows[0].get(0).toString().removeSurrounding("[", "]")
+                        }
+                    } catch (_: Exception) { }
+                    try {
+                        val rsT = conn.query("SELECT topical_type, type_name, level FROM topical_type ORDER BY level, topical_type")
+                        val rowsT = rsT.toList()
+                        for (row in rowsT) {
+                            val code = row.get(0).toString().removeSurrounding("[", "]")
+                            val name = row.get(1).toString().removeSurrounding("[", "]")
+                            val lv = row.get(2).toString().removeSurrounding("[", "]").toIntOrNull() ?: 0
+                            if (lv == 1) typeListL1.add(Pair(code, name))
+                            else if (lv == 2) typeListL2.add(Pair(code, name))
+                        }
+                    } catch (_: Exception) { }
+                    // type_list 格式可能是 "abc" 或 "[\"a\",\"b\"]" 等,统一处理成单个字符的字符串集合
+                    val checkedCodes = typeListStr
+                        .replace("[", "").replace("]", "")
+                        .replace("\"", "").replace("'", "")
+                        .replace(",", "").replace(" ", "")
+                        .filter { it.isLetterOrDigit() }
+                        .map { it.toString() }
+                        .toSet()
+
                     runOnUiThread {
                         progressBar.visibility = View.GONE
                         tvDate.text = dateText
@@ -198,6 +244,45 @@ class TopicEditActivity : AppCompatActivity() {
                         } else {
                             llRejectMemo.visibility = View.GONE
                         }
+
+                        // 渲染重要选题(只读)
+                        llImportantTypes.removeAllViews()
+                        if (typeListL1.isEmpty()) {
+                            val tv = TextView(this@TopicEditActivity)
+                            tv.text = "无重要选题"
+                            tv.setTextColor(0xFF999999.toInt())
+                            tv.textSize = 13f
+                            llImportantTypes.addView(tv)
+                        } else {
+                            typeListL1.forEach { (code, name) ->
+                                val cb = CheckBox(this@TopicEditActivity)
+                                cb.text = name
+                                cb.tag = code  // 保存code用于提交时收集
+                                cb.isChecked = checkedCodes.contains(code)
+                                cb.setTextColor(0xFF333333.toInt())
+                                llImportantTypes.addView(cb)
+                            }
+                        }
+
+                        // 渲染选题方向(只读)
+                        llDirectionTypes.removeAllViews()
+                        if (typeListL2.isEmpty()) {
+                            val tv = TextView(this@TopicEditActivity)
+                            tv.text = "无选题方向"
+                            tv.setTextColor(0xFF999999.toInt())
+                            tv.textSize = 13f
+                            llDirectionTypes.addView(tv)
+                        } else {
+                            typeListL2.forEach { (code, name) ->
+                                val cb = CheckBox(this@TopicEditActivity)
+                                cb.text = name
+                                cb.tag = code  // 保存code用于提交时收集
+                                cb.isChecked = checkedCodes.contains(code)
+                                cb.setTextColor(0xFF333333.toInt())
+                                llDirectionTypes.addView(cb)
+                            }
+                        }
+
                         if (vet == 0) {
                             btnSubmit.isEnabled = true
                             btnSubmit.alpha = 1f
@@ -217,7 +302,7 @@ class TopicEditActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     AlertDialog.Builder(this@TopicEditActivity)
                         .setTitle("错误")
-                        .setMessage("加载失败：${e.javaClass.simpleName}\n${e.message}")
+                        .setMessage("加载失败:${e.javaClass.simpleName}\n${e.message}")
                         .setPositiveButton("确定", null)
                         .show()
                     isLoading = false
@@ -246,7 +331,7 @@ class TopicEditActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("确认提交")
-            .setMessage("确定要保存修改吗？")
+            .setMessage("确定要保存修改吗?")
             .setPositiveButton("确定") { _, _ -> doSubmit(newTitle, newContent) }
             .setNegativeButton("取消", null)
             .show()
@@ -259,13 +344,31 @@ class TopicEditActivity : AppCompatActivity() {
         val escContent = newContent.replace("'", "''")
         val escLoginId = MyApp.loginId.replace("'", "''")
         val escIdCom = idCom.replace("'", "''")
+        val escLoginDep = idDep.replace("'", "''")
         // 当前时间：年(2位)+月(2位)+日(2位)+时(2位)+分(2位) → 如 2607231113（yyMMddHHmm，10位）
-        // 与字段名 last_mod_date 语义一致，且结果页按“MM月dd日”显示需含“日”
         val sdf = java.text.SimpleDateFormat("yyMMddHHmm", java.util.Locale.getDefault())
         val lastModDate = sdf.format(java.util.Date())
+
+        // 收集选中的复选框code（先level1后level2，保持顺序）
+        val selectedCodes = mutableListOf<String>()
+        for (i in 0 until llImportantTypes.childCount) {
+            val child = llImportantTypes.getChildAt(i)
+            if (child is CheckBox && child.isChecked) {
+                child.tag?.toString()?.let { selectedCodes.add(it) }
+            }
+        }
+        for (i in 0 until llDirectionTypes.childCount) {
+            val child = llDirectionTypes.getChildAt(i)
+            if (child is CheckBox && child.isChecked) {
+                child.tag?.toString()?.let { selectedCodes.add(it) }
+            }
+        }
+        val typeListStr = selectedCodes.joinToString("")
+
         Thread {
             try {
                 Db.withConnection { conn ->
+                    // 1. 更新 commission_summary
                     val sql = "UPDATE commission_summary SET " +
                         "com_title = '$escTitle', " +
                         "com_summary = '$escContent', " +
@@ -273,11 +376,17 @@ class TopicEditActivity : AppCompatActivity() {
                         "last_mod_date = '$lastModDate' " +
                         "WHERE id_com = '$escIdCom'"
                     conn.execute(sql)
+
+                    // 2. 更新 joined_topical.type_list
+                    val sql2 = "UPDATE joined_topical SET " +
+                        "type_list = '${typeListStr.replace("'", "''")}' " +
+                        "WHERE id_com = '$escIdCom' AND id_joined_dep = '$escLoginDep'"
+                    conn.execute(sql2)
                 }
                 runOnUiThread {
                     AlertDialog.Builder(this@TopicEditActivity)
                         .setTitle("成功")
-                        .setMessage("修改已保存\n提交时间：$lastModDate")
+                        .setMessage("修改已保存\n提交时间:$lastModDate")
                         .setPositiveButton("确定") { _, _ -> finish() }
                         .show()
                     isLoading = false
@@ -286,7 +395,7 @@ class TopicEditActivity : AppCompatActivity() {
                 runOnUiThread {
                     AlertDialog.Builder(this@TopicEditActivity)
                         .setTitle("错误")
-                        .setMessage("提交失败：${e.javaClass.simpleName}\n${e.message}")
+                        .setMessage("提交失败:${e.javaClass.simpleName}\n${e.message}")
                         .setPositiveButton("确定", null)
                         .show()
                     isLoading = false
@@ -309,7 +418,7 @@ class TopicEditActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("确认删除")
-            .setMessage("删除后不可恢复，确定要删除该选题吗？")
+            .setMessage("删除后不可恢复,确定要删除该选题吗?")
             .setPositiveButton("删除") { _, _ -> doDelete() }
             .setNegativeButton("取消", null)
             .show()
@@ -336,7 +445,7 @@ class TopicEditActivity : AppCompatActivity() {
                 runOnUiThread {
                     AlertDialog.Builder(this@TopicEditActivity)
                         .setTitle("错误")
-                        .setMessage("删除失败：${e.javaClass.simpleName}\n${e.message}")
+                        .setMessage("删除失败:${e.javaClass.simpleName}\n${e.message}")
                         .setPositiveButton("确定", null)
                         .show()
                     isLoading = false

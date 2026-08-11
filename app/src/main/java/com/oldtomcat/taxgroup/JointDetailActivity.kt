@@ -335,8 +335,8 @@ class JointDetailActivity : AppCompatActivity() {
         Thread {
             try {
                 Db.withConnection { conn ->
-                    val insertSql = "INSERT INTO joined_topical (id_com, id_joined_dep, id_joined, type_list) VALUES (" +
-                        "'$escIdCom', '$escLoginDep', '$idJoined', '$typeListEsc')"
+                    val insertSql = "INSERT INTO joined_topical (id_com, id_joined_dep, id_joined, type_list, ps) VALUES (" +
+                        "'$escIdCom', '$escLoginDep', '$idJoined', '$typeListEsc', 1  )"
                     conn.execute(insertSql)
                 }
                 runOnUiThread {

@@ -5,6 +5,7 @@ import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -33,11 +34,14 @@ class TopicAuditDetailActivity : AppCompatActivity() {
     private lateinit var etRejectMemo: EditText
     private lateinit var llJointPub: LinearLayout
     private lateinit var tvJointEndDate: TextView
+    private lateinit var llImportantTypes: LinearLayout
+    private lateinit var llDirectionTypes: LinearLayout
     private lateinit var btnBackBottom: Button
     private lateinit var btnSubmit: Button
     private lateinit var progressBar: ProgressBar
 
     private var idCom: String = ""
+    private var idDep: String = ""
     private var jointEndDateStr: String = "" // yyMMdd 格式
 
     // 查询锁：防并发访问数据库（HTTP）
@@ -78,6 +82,8 @@ class TopicAuditDetailActivity : AppCompatActivity() {
         etRejectMemo = findViewById(R.id.et_reject_memo)
         llJointPub = findViewById(R.id.ll_joint_pub)
         tvJointEndDate = findViewById(R.id.tv_joint_end_date)
+        llImportantTypes = findViewById(R.id.ll_audit_important_types)
+        llDirectionTypes = findViewById(R.id.ll_audit_direction_types)
         btnBackBottom = findViewById(R.id.btn_back_bottom)
         btnSubmit = findViewById(R.id.btn_submit)
         progressBar = findViewById(R.id.progress_bar)
@@ -176,9 +182,9 @@ class TopicAuditDetailActivity : AppCompatActivity() {
         return sdf.format(date)
     }
 
-    // 生成id_joined: yyMMddmmss
+    // 生成id_joined: yyMMddHHmmss（12位）
     private fun generateIdJoined(): String {
-        val sdf = SimpleDateFormat("yyMMddmmss", Locale.getDefault())
+        val sdf = SimpleDateFormat("yyMMddHHmmss", Locale.getDefault())
         return sdf.format(Calendar.getInstance().time)
     }
 
@@ -215,17 +221,18 @@ class TopicAuditDetailActivity : AppCompatActivity() {
                     val idComValue = row.get(0).toString().removeSurrounding("[", "]")
                     val comTitle = row.get(1).toString().removeSurrounding("[", "]")
                     val comSummary = row.get(2).toString().removeSurrounding("[", "]")
-                    val idDep = row.get(3).toString().removeSurrounding("[", "]")
+                    val idDepValue = row.get(3).toString().removeSurrounding("[", "]")
+                    this.idDep = idDepValue
                     val nameUser = row.get(4).toString().removeSurrounding("[", "]")
 
                     // 第二步：单独查部门名称
-                    val escIdDep = idDep.replace("'", "''")
+                    val escIdDep = idDepValue.replace("'", "''")
                     val depRs = conn.query("SELECT name_dep FROM Department WHERE id_dep = '$escIdDep'")
                     val depRows = depRs.toList()
                     val nameDep = if (depRows.isNotEmpty()) {
                         depRows[0].get(0).toString().removeSurrounding("[", "]")
                     } else {
-                        idDep
+                        idDepValue
                     }
 
                     // 录入日期：从 id_com 取月、日
@@ -233,14 +240,87 @@ class TopicAuditDetailActivity : AppCompatActivity() {
                     val day = if (idComValue.length >= 6) idComValue.substring(4, 6) else "--"
                     val dateText = "${month}月${day}日"
 
+                    // 加载选题类型（只读）—— id_joined_dep 用 id_com 里的 id_dep（选题发起部门）
+                    var typeListStr = ""
+                    val typeListL1: MutableList<Pair<String, String>> = mutableListOf()
+                    val typeListL2: MutableList<Pair<String, String>> = mutableListOf()
+                    try {
+                        val rsJt = conn.query(
+                            "SELECT type_list FROM joined_topical WHERE id_com = '$idComValue' AND id_joined_dep = '$idDepValue'"
+                        )
+                        val jtRows = rsJt.toList()
+                        if (jtRows.isNotEmpty()) {
+                            typeListStr = jtRows[0].get(0).toString().removeSurrounding("[", "]")
+                        }
+                    } catch (_: Exception) { }
+                    try {
+                        val rsT = conn.query("SELECT topical_type, type_name, level FROM topical_type ORDER BY level, topical_type")
+                        val rowsT = rsT.toList()
+                        for (row in rowsT) {
+                            val code = row.get(0).toString().removeSurrounding("[", "]")
+                            val name = row.get(1).toString().removeSurrounding("[", "]")
+                            val lv = row.get(2).toString().removeSurrounding("[", "]").toIntOrNull() ?: 0
+                            if (lv == 1) typeListL1.add(Pair(code, name))
+                            else if (lv == 2) typeListL2.add(Pair(code, name))
+                        }
+                    } catch (_: Exception) { }
+                    val checkedCodes = typeListStr
+                        .replace("[", "").replace("]", "")
+                        .replace("\"", "").replace("'", "")
+                        .replace(",", "").replace(" ", "")
+                        .filter { it.isLetterOrDigit() }
+                        .map { it.toString() }
+                        .toSet()
+
                     runOnUiThread {
                         progressBar.visibility = View.GONE
                         tvDate.text = dateText
                         tvAuthor.text = nameUser
                         tvDepartment.text = nameDep
-                        tvIdDep.text = idDep
+                        tvIdDep.text = idDepValue
                         tvTitle.text = comTitle
                         tvContent.text = comSummary
+
+                        // 渲染重要选题（只读）
+                        llImportantTypes.removeAllViews()
+                        if (typeListL1.isEmpty()) {
+                            val tv = TextView(this@TopicAuditDetailActivity)
+                            tv.text = "无重要选题"
+                            tv.setTextColor(0xFF999999.toInt())
+                            tv.textSize = 13f
+                            llImportantTypes.addView(tv)
+                        } else {
+                            typeListL1.forEach { (code, name) ->
+                                val cb = CheckBox(this@TopicAuditDetailActivity)
+                                cb.text = name
+                                cb.tag = code
+                                cb.isChecked = checkedCodes.contains(code)
+                                cb.isEnabled = true
+                                cb.setTextColor(0xFF333333.toInt())
+                                llImportantTypes.addView(cb)
+                            }
+                        }
+
+                        // 渲染选题方向（只读）
+                        llDirectionTypes.removeAllViews()
+                        if (typeListL2.isEmpty()) {
+                            val tv = TextView(this@TopicAuditDetailActivity)
+                            tv.text = "无选题方向"
+                            tv.setTextColor(0xFF999999.toInt())
+                            tv.textSize = 13f
+                            llDirectionTypes.addView(tv)
+                        } else {
+                            typeListL2.forEach { (code, name) ->
+                                val cb = CheckBox(this@TopicAuditDetailActivity)
+                                cb.text = name
+                                cb.tag = code
+                                cb.isChecked = checkedCodes.contains(code)
+                                cb.isEnabled = true
+                                cb.setTextColor(0xFF333333.toInt())
+                                llDirectionTypes.addView(cb)
+                            }
+                        }
+
                         isLoading = false
                     }
                 }
@@ -302,10 +382,21 @@ class TopicAuditDetailActivity : AppCompatActivity() {
         val escMemo = memo.replace("'", "''")
         val escIdCom = idCom.replace("'", "''")
         val escJointDate = jointEndDateStr.replace("'", "''")
-        // 获取所属部门id_dep（从tvIdDep获取）
-        val idDep = tvIdDep.text.toString()
+        // 获取所属部门id_dep（从成员变量 idDep）
         val escIdDep = idDep.replace("'", "''")
-        // 生成id_joined: yyMMddmmss
+        // 收集当前 CheckBox 选中项的 code（先 level=1 后 level=2），code 存在 CheckBox.tag 里
+        val sb = StringBuilder()
+        for (i in 0 until llImportantTypes.childCount) {
+            val v = llImportantTypes.getChildAt(i)
+            if (v is CheckBox && v.isChecked && v.tag != null) sb.append(v.tag.toString())
+        }
+        for (i in 0 until llDirectionTypes.childCount) {
+            val v = llDirectionTypes.getChildAt(i)
+            if (v is CheckBox && v.isChecked && v.tag != null) sb.append(v.tag.toString())
+        }
+        val typeListStr = sb.toString()
+        val escTypeList = typeListStr.replace("'", "''")
+        // 生成id_joined: yyMMddHHmmss（12位）
         val idJoined = generateIdJoined()
 
         Thread {
@@ -329,8 +420,9 @@ class TopicAuditDetailActivity : AppCompatActivity() {
 
                     // 通过审核时，插入joined_topical记录
                     if (vetStatus == 1) {
-                        val insertSql = "INSERT INTO joined_topical (id_com, id_joined_dep, id_joined) VALUES (" +
-                            "'$escIdCom', '$escIdDep', '$idJoined')"
+//                        val insertSql = "INSERT INTO joined_topical (id_com, id_joined_dep, id_joined, type_list) VALUES (" +
+//                            "'$escIdCom', '$escIdDep', '$idJoined', '$escTypeList' )"
+                        val insertSql = "UPDATE joined_topical SET ps = 1 WHERE id_com = '$escIdCom'"
                         conn.execute(insertSql)
                     }
                 }

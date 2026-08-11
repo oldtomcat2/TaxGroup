@@ -14,10 +14,14 @@ android {
         applicationId = "com.oldtomcat.taxgroup"
         minSdk = 24
         targetSdk = 36
-        versionCode = 100
-        versionName = "1.0.0-beta1"
+        versionCode = 101
+        versionName = "1.0.0-beta2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

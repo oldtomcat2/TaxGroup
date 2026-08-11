@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
@@ -24,6 +25,10 @@ class MainActivity : AppCompatActivity() {
         user_pass = findViewById(R.id.Upass)
         bt1 = findViewById(R.id.Bt1)
         btn_register = findViewById(R.id.btn_register)
+
+        // 显示当前版本号（从 BuildConfig 读取，随版本号变化自动同步）
+        val tvVersion = findViewById<TextView>(R.id.tv_app_version)
+        tvVersion.text = "v${BuildConfig.VERSION_NAME}"
 
         // 默认填充：用户名为上次成功登录的用户名，密码留空
         val lastUsername = sp.getString("last_username", "") ?: ""
@@ -49,7 +54,7 @@ class MainActivity : AppCompatActivity() {
                 try {
                     Db.withConnection { conn ->
                         val getName = conn.query(
-                            "select a.id_user,a.name_user,a.id_dep,b.name_dep from User a,Department b where a.id_user='$Uname' and a.password='$Upass' and a.id_dep = b.id_dep"
+                            "select a.id_user,a.name_user,a.id_dep,b.name_dep,b.level from User a,Department b where a.id_user='$Uname' and a.password='$Upass' and a.id_dep = b.id_dep"
                         )
                         val rowlist = getName.toList()
                         runOnUiThread {
@@ -66,6 +71,9 @@ class MainActivity : AppCompatActivity() {
                                 MyApp.loginName = rowlist[0].get(1).toString()
                                 MyApp.loginDeaprt = rowlist[0].get(2).toString()
                                 MyApp.loginDeaprtName = rowlist[0].get(3).toString()
+                                MyApp.loginDepLevel = try {
+                                    rowlist[0].get(4).toString().removeSurrounding("[", "]").trim().toInt()
+                                } catch (_: Exception) { 0 }
                                 val intent = Intent(this@MainActivity, HomeMenuActivity::class.java)
                                 startActivity(intent)
                             }

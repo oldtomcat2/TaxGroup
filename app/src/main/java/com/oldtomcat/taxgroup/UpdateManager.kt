@@ -34,11 +34,11 @@ object UpdateManager {
     // 1. raw URL：指向 version.json（放在仓库根目录或 release 附件）
     //    示例：https://raw.githubusercontent.com/你的用户名/你的仓库名/main/version.json
     private const val VERSION_JSON_URL =
-        "https://raw.githubusercontent.com/oldtomcat2/TaxGroup/main/version.json"
+        "https://gitee.com/oldtomcat/TaxGroup/raw/main/version.json"
 
     // 2. APK 下载 URL（也可以从 version.json 中读取）
     private const val DEFAULT_APK_URL =
-        "https://github.com/oldtomcat2/TaxGroup/releases/download/v1.0.1/app-debug.apk"
+        "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta2/app-debug.apk"
 
     // 3. APK 文件名（下载保存用）
     private const val APK_FILE_NAME = "TaxGroup-update.apk"

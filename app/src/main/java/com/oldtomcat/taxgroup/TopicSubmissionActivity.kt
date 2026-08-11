@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -180,10 +182,11 @@ class TopicSubmissionActivity : AppCompatActivity() {
         view.findViewById<View>(R.id.btn_close).setOnClickListener { dialog.dismiss() }
         dialog.show()
 
-        // 异步查询部门名称并更新
+        // 异步查询部门名称 + 选题类型
         Thread {
             try {
                 Db.withConnection { conn ->
+                    // 查询部门名称
                     val rs = conn.query(
                         "SELECT name_dep FROM Department WHERE id_dep='${item.idDep}'"
                     )
@@ -191,17 +194,91 @@ class TopicSubmissionActivity : AppCompatActivity() {
                     val deptName = if (rows.isNotEmpty()) {
                         rows[0].get(0).toString().removeSurrounding("[", "]")
                     } else {
-                        item.idDep // 查不到时回退显示代码值
+                        item.idDep
                     }
+
+                    // 查询 type_list
+                    var typeListStr = ""
+                    val typeListL1: MutableList<Pair<String, String>> = mutableListOf()
+                    val typeListL2: MutableList<Pair<String, String>> = mutableListOf()
+                    try {
+                        val rsJt = conn.query(
+                            "SELECT type_list FROM joined_topical WHERE id_com='${item.idCom}' AND id_joined_dep='${item.idDep}'"
+                        )
+                        val jtRows = rsJt.toList()
+                        if (jtRows.isNotEmpty()) {
+                            typeListStr = jtRows[0].get(0).toString().removeSurrounding("[", "]")
+                        }
+                    } catch (_: Exception) { }
+                    try {
+                        val rsT = conn.query("SELECT topical_type, type_name, level FROM topical_type ORDER BY level, topical_type")
+                        val rowsT = rsT.toList()
+                        for (row in rowsT) {
+                            val code = row.get(0).toString().removeSurrounding("[", "]")
+                            val name = row.get(1).toString().removeSurrounding("[", "]")
+                            val lv = row.get(2).toString().removeSurrounding("[", "]").toIntOrNull() ?: 0
+                            if (lv == 1) typeListL1.add(Pair(code, name))
+                            else if (lv == 2) typeListL2.add(Pair(code, name))
+                        }
+                    } catch (_: Exception) { }
+
+                    // type_list 格式可能是 "abc" 或 "[\"a\",\"b\"]" 等，统一处理成单个字符的字符串集合
+                    val checkedCodes = typeListStr
+                        .replace("[", "").replace("]", "")
+                        .replace("\"", "").replace("'", "")
+                        .replace(",", "").replace(" ", "")
+                        .filter { it.isLetterOrDigit() }
+                        .map { it.toString() }
+                        .toSet()
+
                     runOnUiThread {
                         if (dialog.isShowing) {
                             tvDepart.text = deptName
+
+                            // 渲染重要选题
+                            val llImp = dialog.findViewById<LinearLayout>(R.id.ll_detail_important_types)
+                            llImp?.removeViews(1, llImp.childCount - 1)
+                            if (typeListL1.isEmpty()) {
+                                val tv = TextView(this@TopicSubmissionActivity)
+                                tv.text = "无重要选题"
+                                tv.setTextColor(0xFF999999.toInt())
+                                tv.textSize = 13f
+                                llImp?.addView(tv)
+                            } else {
+                                typeListL1.forEach { (code, name) ->
+                                    val cb = CheckBox(this@TopicSubmissionActivity)
+                                    cb.text = name
+                                    cb.isChecked = checkedCodes.contains(code)
+                                    cb.isEnabled = false
+                                    cb.setTextColor(0xFF333333.toInt())
+                                    llImp?.addView(cb)
+                                }
+                            }
+
+                            // 渲染选题方向
+                            val llDir = dialog.findViewById<LinearLayout>(R.id.ll_detail_direction_types)
+                            llDir?.removeViews(1, llDir.childCount - 1)
+                            if (typeListL2.isEmpty()) {
+                                val tv = TextView(this@TopicSubmissionActivity)
+                                tv.text = "无选题方向"
+                                tv.setTextColor(0xFF999999.toInt())
+                                tv.textSize = 13f
+                                llDir?.addView(tv)
+                            } else {
+                                typeListL2.forEach { (code, name) ->
+                                    val cb = CheckBox(this@TopicSubmissionActivity)
+                                    cb.text = name
+                                    cb.isChecked = checkedCodes.contains(code)
+                                    cb.isEnabled = false
+                                    cb.setTextColor(0xFF333333.toInt())
+                                    llDir?.addView(cb)
+                                }
+                            }
                         }
                     }
                 }
             } catch (e: Exception) {
-                // 查询失败保持原样，不阻断弹窗
-                android.util.Log.e("TopicSub", "查询部门名称失败", e)
+                android.util.Log.e("TopicSub", "查询详情失败", e)
             }
         }.start()
     }

@@ -180,21 +180,21 @@ object UpdateManager {
 
     /**
      * 使用系统 DownloadManager 下载 APK（带进度通知、断点续传）
+     * 下载到 App 私有目录（避免 Android 6.0+ 外部存储权限问题）
      */
     private fun downloadAndInstall(context: Context, apkUrl: String) {
         try {
-            // 删除旧文件
-            val target = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                APK_FILE_NAME
-            )
+            // 使用 App 私有目录作为下载路径，不需要 WRITE_EXTERNAL_STORAGE 权限
+            val privateDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "")
+            if (!privateDir.exists()) privateDir.mkdirs()
+            val target = File(privateDir, APK_FILE_NAME)
             if (target.exists()) target.delete()
 
             val request = DownloadManager.Request(Uri.parse(apkUrl))
                 .setTitle("古楚轩船 更新中...")
                 .setDescription("正在下载新版本")
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, APK_FILE_NAME)
+                .setDestinationUri(android.net.Uri.fromFile(target))
                 .setAllowedOverMetered(true)
                 .setAllowedOverRoaming(true)
 

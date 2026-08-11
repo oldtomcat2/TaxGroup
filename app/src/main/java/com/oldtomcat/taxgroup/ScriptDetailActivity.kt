@@ -33,11 +33,14 @@ class ScriptDetailActivity : AppCompatActivity() {
     private var idJoined: String = ""
     private var idJoinedList: String = ""
     private var typeName: String = ""
+    private var isSubmittedMode: Boolean = false  // true=已提交（只可改script），false=未提交（INSERT）
+    private var idDetail: String = ""              // 已提交时的主键值
 
     // 数据库加载的数据
     private var comTitle: String = ""
     private var comSummary: String = ""
     private var idType: String = ""  // 最后一位字母
+    private var existingScript: String = ""  // 已提交时从 topical_detail 读到的原 script
 
     @Volatile
     private var isLoading = false
@@ -51,6 +54,8 @@ class ScriptDetailActivity : AppCompatActivity() {
         const val EXTRA_ID_JOINED = "id_joined"
         const val EXTRA_ID_JOINED_LIST = "id_joined_list"
         const val EXTRA_TYPE_NAME = "type_name"
+        const val EXTRA_IS_SUBMITTED = "is_submitted"
+        const val EXTRA_ID_DETAIL = "id_detail"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,6 +73,8 @@ class ScriptDetailActivity : AppCompatActivity() {
         idJoined = intent.getStringExtra(EXTRA_ID_JOINED) ?: ""
         idJoinedList = intent.getStringExtra(EXTRA_ID_JOINED_LIST) ?: ""
         typeName = intent.getStringExtra(EXTRA_TYPE_NAME) ?: ""
+        isSubmittedMode = intent.getBooleanExtra(EXTRA_IS_SUBMITTED, false)
+        idDetail = intent.getStringExtra(EXTRA_ID_DETAIL) ?: ""
 
         // 提取最后一位字母作为 id_type
         idType = if (idJoinedList.isNotEmpty()) idJoinedList.last().toString() else ""
@@ -107,11 +114,19 @@ class ScriptDetailActivity : AppCompatActivity() {
             }
         })
 
-        // 保存按钮 - 暂存到手机
-        btnSave.setOnClickListener { saveDraft() }
+        // 保存按钮 - 已提交模式下走 UPDATE；未提交模式下暂存到本地
+        btnSave.setOnClickListener {
+            if (isSubmittedMode) updateScript() else saveDraft()
+        }
 
-        // 提交按钮 - 插入 topical_detail
+        // 提交按钮 - 插入 topical_detail（仅未提交模式可见）
         btnSubmit.setOnClickListener { submitScript() }
+
+        // 已提交模式：隐藏提交按钮（只允许改 script），保存按钮改为“保存修改”
+        if (isSubmittedMode) {
+            btnSubmit.visibility = View.GONE
+            btnSave.text = "保存修改"
+        }
 
         // 加载数据
         loadData()
@@ -135,6 +150,18 @@ class ScriptDetailActivity : AppCompatActivity() {
                         comTitle = csRows[0].get(0).toString().removeSurrounding("[", "]").trim()
                         comSummary = csRows[0].get(1).toString().removeSurrounding("[", "]").trim()
                     }
+
+                    // 2. 已提交模式：从 topical_detail 查出原 script
+                    if (isSubmittedMode && idDetail.isNotEmpty()) {
+                        val escIdDetail = idDetail.replace("'", "''")
+                        val rsTd = conn.query(
+                            "SELECT script FROM topical_detail WHERE id_detail = '$escIdDetail' LIMIT 1"
+                        )
+                        val tdRows = rsTd.toList()
+                        if (tdRows.isNotEmpty()) {
+                            existingScript = tdRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                        }
+                    }
                 }
 
                 runOnUiThread {
@@ -143,8 +170,14 @@ class ScriptDetailActivity : AppCompatActivity() {
                     tvComSummary.text = comSummary.ifEmpty { "[无内容]" }
                     tvTypeName.text = typeName
 
-                    // 尝试加载暂存内容
-                    loadDraft()
+                    if (isSubmittedMode && existingScript.isNotEmpty()) {
+                        // 已提交模式：回填原 script 到编辑框
+                        etScript.setText(existingScript)
+                        tvCharCount.text = "${existingScript.length}/1000"
+                    } else {
+                        // 未提交模式：尝试加载暂存内容
+                        loadDraft()
+                    }
 
                     isLoading = false
                 }
@@ -262,6 +295,56 @@ class ScriptDetailActivity : AppCompatActivity() {
                     isLoading = false
                     AlertDialog.Builder(this@ScriptDetailActivity)
                         .setTitle("提交失败")
+                        .setMessage("${e.javaClass.simpleName}\n${e.message}")
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
+        }.start()
+    }
+
+    // 已提交模式下的“保存修改”逻辑：UPDATE topical_detail.script
+    private fun updateScript() {
+        val script = etScript.text.toString().trim()
+        if (script.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("提示")
+                .setMessage("脚本内容不能为空")
+                .setPositiveButton("确定", null)
+                .show()
+            return
+        }
+
+        if (isLoading) return
+        isLoading = true
+        progressBar.visibility = View.VISIBLE
+
+        Thread {
+            try {
+                Db.withConnection { conn ->
+                    val escIdDetail = idDetail.replace("'", "''")
+                    val escScript = script.replace("'", "''")
+                    val updateSql = "UPDATE topical_detail SET script = '$escScript' " +
+                        "WHERE id_detail = '$escIdDetail'"
+                    conn.execute(updateSql)
+                }
+
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    isLoading = false
+                    existingScript = script
+                    AlertDialog.Builder(this@ScriptDetailActivity)
+                        .setTitle("保存成功")
+                        .setMessage("脚本已修改")
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    isLoading = false
+                    AlertDialog.Builder(this@ScriptDetailActivity)
+                        .setTitle("保存失败")
                         .setMessage("${e.javaClass.simpleName}\n${e.message}")
                         .setPositiveButton("确定", null)
                         .show()

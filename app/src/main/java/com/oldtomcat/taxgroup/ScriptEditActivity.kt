@@ -21,7 +21,8 @@ data class ScriptItem(
     val idCom: String,
     val comTitle: String,
     val isSubmitted: Boolean, // true=已提交，false=未提交
-    val typeName: String?     // 类型名称（从 topical_type 查，level>1 时显示）
+    val typeName: String?,    // 类型名称（从 topical_type 查，level>1 时显示）
+    val idDetail: String = "" // topical_detail.id_detail主键（已提交时已存在；未提交时为空）
 )
 
 class ScriptEditActivity : AppCompatActivity() {
@@ -188,6 +189,11 @@ class ScriptEditActivity : AppCompatActivity() {
                             )
                             val tdRows = rsTd.toList()
                             val isSubmitted = tdRows.isNotEmpty()
+                            val idDetail = if (isSubmitted) {
+                                tdRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                            } else {
+                                ""
+                            }
 
                             // 5. 查 topical_type：字母对应，level>1 时取 type_name
                             val escLetter = letter.replace("'", "''")
@@ -210,7 +216,8 @@ class ScriptEditActivity : AppCompatActivity() {
                                 idCom = idCom,
                                 comTitle = comTitle,
                                 isSubmitted = isSubmitted,
-                                typeName = typeName
+                                typeName = typeName,
+                                idDetail = idDetail
                             )
 
                             if (isSubmitted) submitted.add(item) else draft.add(item)
@@ -256,27 +263,14 @@ class ScriptEditActivity : AppCompatActivity() {
             rvScripts.visibility = View.VISIBLE
             tvEmpty.visibility = View.GONE
             rvScripts.adapter = ScriptItemAdapter(allItems) { item ->
-                if (item.isSubmitted) {
-                    // 已提交：仅查看详情
-                    AlertDialog.Builder(this@ScriptEditActivity)
-                        .setTitle(item.comTitle.ifEmpty { "脚本详情" })
-                        .setMessage(
-                            "选题编号：${item.idCom}\n" +
-                            "脚本编号：${item.idJoinedList}\n" +
-                            "类型：${item.typeName ?: "未分类"}\n" +
-                            "状态：已提交"
-                        )
-                        .setPositiveButton("确定", null)
-                        .show()
-                } else {
-                    // 未提交：进入编辑页
-                    val intent = android.content.Intent(this@ScriptEditActivity, ScriptDetailActivity::class.java)
-                        .putExtra(ScriptDetailActivity.EXTRA_ID_COM, item.idCom)
-                        .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED, item.idJoined)
-                        .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED_LIST, item.idJoinedList)
-                        .putExtra(ScriptDetailActivity.EXTRA_TYPE_NAME, item.typeName ?: "")
-                    startActivity(intent)
-                }
+                val intent = android.content.Intent(this@ScriptEditActivity, ScriptDetailActivity::class.java)
+                    .putExtra(ScriptDetailActivity.EXTRA_ID_COM, item.idCom)
+                    .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED, item.idJoined)
+                    .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED_LIST, item.idJoinedList)
+                    .putExtra(ScriptDetailActivity.EXTRA_TYPE_NAME, item.typeName ?: "")
+                    .putExtra(ScriptDetailActivity.EXTRA_IS_SUBMITTED, item.isSubmitted)
+                    .putExtra(ScriptDetailActivity.EXTRA_ID_DETAIL, item.idDetail)
+                startActivity(intent)
             }
         }
     }

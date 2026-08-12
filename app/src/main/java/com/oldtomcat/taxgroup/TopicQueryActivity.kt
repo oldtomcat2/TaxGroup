@@ -16,6 +16,15 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import java.util.Calendar
 
+// 扁平化列表项：部门标题 或 选题记录
+data class TopicQueryEntry(
+    val depName: String = "",
+    val count: Int = 0,
+    val topic: TopicItem? = null
+) {
+    val isHeader: Boolean get() = topic == null
+}
+
 class TopicQueryActivity : AppCompatActivity() {
 
     private lateinit var rvTopics: RecyclerView
@@ -29,7 +38,8 @@ class TopicQueryActivity : AppCompatActivity() {
     private lateinit var btnRefresh: ImageButton
     private lateinit var progressBar: ProgressBar
 
-    // 查询锁：防止 onCreate / onResume / 按钮 同时触发并发查询
+    private val flatList = mutableListOf<TopicQueryEntry>()
+
     @Volatile
     private var isQuerying = false
 
@@ -43,17 +53,11 @@ class TopicQueryActivity : AppCompatActivity() {
             insets
         }
 
-        // 顶部状态栏
         findViewById<TextView>(R.id.tv_user_name).text = MyApp.loginName
         findViewById<TextView>(R.id.tv_depart).text = MyApp.loginDeaprtName
 
-        // 返回
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
-
-        // 顶部刷新按钮
         findViewById<View>(R.id.btn_refresh_top).setOnClickListener { doQuery() }
-
-        // 顶部主页按钮
         findViewById<View>(R.id.btn_home).setOnClickListener {
             val intent = android.content.Intent(this, HomeMenuActivity::class.java)
                 .setFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -61,7 +65,6 @@ class TopicQueryActivity : AppCompatActivity() {
             finish()
         }
 
-        // 初始化控件
         cbAudited = findViewById(R.id.cb_audited)
         cbUnaudited = findViewById(R.id.cb_unaudited)
         cbRejected = findViewById(R.id.cb_rejected)
@@ -75,32 +78,23 @@ class TopicQueryActivity : AppCompatActivity() {
 
         rvTopics.layoutManager = LinearLayoutManager(this)
 
-        // 设置月份下拉列表 (全部 + 1-12月)
         val months = mutableListOf("全部")
         for (i in 1..12) months.add("${i}月")
         spinnerMonth.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, months)
 
-        // 默认选中当前月份（位置 = 当前月份）
         val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
-        spinnerMonth.setSelection(currentMonth)  // position 1=1月, 7=7月
+        spinnerMonth.setSelection(currentMonth)
 
-        // 默认全部选中
         cbAudited.isChecked = true
         cbUnaudited.isChecked = true
         cbRejected.isChecked = true
 
-        // 查询按钮
         btnQuery.setOnClickListener { doQuery() }
-
-        // 刷新按钮
         btnRefresh.setOnClickListener { doQuery() }
-
-        // 初始加载：延迟到 onResume 中处理，避免和 onResume 重复查询
     }
 
     override fun onResume() {
         super.onResume()
-        // 统一在这里查询：避免 onCreate + onResume 双重查询
         if (::rvTopics.isInitialized) {
             doQuery()
         }
@@ -153,17 +147,49 @@ class TopicQueryActivity : AppCompatActivity() {
                     val whereSql = "WHERE ${whereClauses.joinToString(" AND ")}"
                     val sql = "SELECT id_com, com_title, com_summary, id_dep, " +
                         "CASE WHEN vet = 1 THEN '已审核' WHEN vet = 2 THEN '未通过' ELSE '待审核' END AS audit_status " +
-                        "FROM commission_summary $whereSql ORDER BY id_com DESC"
+                        "FROM commission_summary $whereSql ORDER BY id_dep ASC, id_com DESC"
 
                     val rs = conn.query(sql)
-                    val list = rs.toList().map { row ->
+                    val rows = rs.toList()
+
+                    if (rows.isEmpty()) {
+                        runOnUiThread {
+                            progressBar.visibility = View.GONE
+                            tvCount.text = "共 0 条"
+                            rvTopics.visibility = View.GONE
+                            tvEmpty.visibility = View.VISIBLE
+                            tvEmpty.text = "无符合条件的数据"
+                            isQuerying = false
+                        }
+                        return@withConnection
+                    }
+
+                    // 缓存部门名（避免重复查询）
+                    val depNameCache = mutableMapOf<String, String>()
+
+                    val list = rows.map { row ->
+                        val idDep = row.get(3).toString().removeSurrounding("[", "]").trim()
+                        val depName = depNameCache.getOrPut(idDep) {
+                            val escIdDep = idDep.replace("'", "''")
+                            val rsDep = conn.query("SELECT name_dep FROM Department WHERE id_dep = '$escIdDep' LIMIT 1")
+                            val depRows = rsDep.toList()
+                            if (depRows.isNotEmpty()) {
+                                depRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                            } else {
+                                idDep
+                            }
+                        }
                         TopicItem(
                             idCom = row.get(0).toString().removeSurrounding("[", "]"),
                             comTitle = row.get(1).toString().removeSurrounding("[", "]"),
                             comSummary = row.get(2).toString().removeSurrounding("[", "]"),
-                            idDep = row.get(3).toString().removeSurrounding("[", "]"),
+                            idDep = idDep,
                             auditStatus = row.get(4).toString().removeSurrounding("[", "]")
-                        )
+                        ).also {
+                            // 临时把 depName 存到一个 map（用 idDep 作为 key 关联）
+                            // 因为 TopicItem 没有 depName 字段，我们用 idDepMap 维护映射
+                            idDepMap[it.idCom] = depName
+                        }
                     }
 
                     runOnUiThread {
@@ -177,9 +203,7 @@ class TopicQueryActivity : AppCompatActivity() {
                         } else {
                             rvTopics.visibility = View.VISIBLE
                             tvEmpty.visibility = View.GONE
-                            rvTopics.adapter = TopicQueryAdapter(list) { item ->
-                                openEditPage(item)
-                            }
+                            buildFlatList(list)
                         }
                         isQuerying = false
                     }
@@ -199,51 +223,91 @@ class TopicQueryActivity : AppCompatActivity() {
         }.start()
     }
 
-    // 点击记录：直接进入编辑页
-    private fun openEditPage(item: TopicItem) {
-        val intent = android.content.Intent(this, TopicEditActivity::class.java)
-        intent.putExtra("id_com", item.idCom)
-        startActivity(intent)
+    // 临时映射：idCom -> depName（因为 TopicItem 没有 depName 字段）
+    private val idDepMap = mutableMapOf<String, String>()
+
+    private fun buildFlatList(list: List<TopicItem>) {
+        flatList.clear()
+
+        // 按部门名分组（排序）
+        val grouped = list.groupBy { idDepMap[it.idCom] ?: it.idDep }.toSortedMap()
+        for ((depName, items) in grouped) {
+            flatList.add(TopicQueryEntry(depName = depName, count = items.size))
+            for (item in items) {
+                flatList.add(TopicQueryEntry(topic = item))
+            }
+        }
+
+        rvTopics.adapter = TopicQueryListAdapter(flatList) { item ->
+            val intent = android.content.Intent(this, TopicEditActivity::class.java)
+            intent.putExtra("id_com", item.idCom)
+            startActivity(intent)
+        }
+    }
+
+    companion object {
+        const val TYPE_HEADER = 0
+        const val TYPE_ITEM = 1
     }
 }
 
-// === Adapter ===
-class TopicQueryAdapter(
-    private val items: List<TopicItem>,
+// === 扁平化 Adapter ===
+class TopicQueryListAdapter(
+    private val items: List<TopicQueryEntry>,
     private val onClick: (TopicItem) -> Unit
-) : RecyclerView.Adapter<TopicQueryAdapter.VH>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    class VH(val card: MaterialCardView) : RecyclerView.ViewHolder(card)
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val card = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_topic_card, parent, false) as MaterialCardView
-        return VH(card)
+    inner class HeaderVH(val root: android.widget.LinearLayout) : RecyclerView.ViewHolder(root) {
+        val tvName: TextView = root.findViewById(R.id.tv_department_name)
+        val tvCount: TextView = root.findViewById(R.id.tv_count)
+        val ivExpand: ImageView = root.findViewById(R.id.iv_expand)
+        val card: MaterialCardView = root.findViewById(R.id.card_department)
     }
 
-    override fun onBindViewHolder(holder: VH, position: Int) {
-        val item = items[position]
-        val ctx = holder.card.context
+    inner class ItemVH(val card: MaterialCardView) : RecyclerView.ViewHolder(card)
 
-        // 月份
-        holder.card.findViewById<TextView>(R.id.tv_month).text = "${item.month}月"
+    override fun getItemViewType(position: Int): Int =
+        if (items[position].isHeader) TopicQueryActivity.TYPE_HEADER else TopicQueryActivity.TYPE_ITEM
 
-        // 标题
-        holder.card.findViewById<TextView>(R.id.tv_title).text = item.comTitle
-
-        // 状态颜色
-        val tvStatus = holder.card.findViewById<TextView>(R.id.tv_status)
-        tvStatus.text = item.auditStatus
-        val badge = tvStatus.background as GradientDrawable
-        when (item.auditStatus) {
-            "已审核" -> badge.setColor(ContextCompat.getColor(ctx, android.R.color.holo_green_dark))
-            "未通过" -> badge.setColor(ContextCompat.getColor(ctx, android.R.color.holo_red_dark))
-            else -> badge.setColor(ContextCompat.getColor(ctx, android.R.color.holo_orange_dark))
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return if (viewType == TopicQueryActivity.TYPE_HEADER) {
+            val v = inflater.inflate(R.layout.item_department_group, parent, false)
+            HeaderVH(v as android.widget.LinearLayout)
+        } else {
+            val v = inflater.inflate(R.layout.item_topic_card, parent, false)
+            ItemVH(v as MaterialCardView)
         }
+    }
 
-        // 点击
-        holder.card.findViewById<MaterialCardView>(R.id.card_root).setOnClickListener {
-            onClick(item)
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        val entry = items[position]
+        if (entry.isHeader) {
+            val h = holder as HeaderVH
+            h.tvName.text = entry.depName
+            h.tvCount.text = "${entry.count} 条"
+            h.ivExpand.rotation = 0f
+            h.card.setOnClickListener(null)
+        } else {
+            val item = entry.topic!!
+            val h = holder as ItemVH
+            val ctx = h.card.context
+
+            h.card.findViewById<TextView>(R.id.tv_month).text = "${item.month}月"
+            h.card.findViewById<TextView>(R.id.tv_title).text = item.comTitle
+
+            val tvStatus = h.card.findViewById<TextView>(R.id.tv_status)
+            tvStatus.text = item.auditStatus
+            val badge = tvStatus.background as GradientDrawable
+            when (item.auditStatus) {
+                "已审核" -> badge.setColor(ContextCompat.getColor(ctx, android.R.color.holo_green_dark))
+                "未通过" -> badge.setColor(ContextCompat.getColor(ctx, android.R.color.holo_red_dark))
+                else -> badge.setColor(ContextCompat.getColor(ctx, android.R.color.holo_orange_dark))
+            }
+
+            h.card.findViewById<MaterialCardView>(R.id.card_root).setOnClickListener {
+                onClick(item)
+            }
         }
     }
 

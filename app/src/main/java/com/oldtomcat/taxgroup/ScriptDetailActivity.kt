@@ -26,6 +26,7 @@ class ScriptDetailActivity : AppCompatActivity() {
     private lateinit var tvCharCount: TextView
     private lateinit var btnSave: Button
     private lateinit var btnSubmit: Button
+    private lateinit var btnAudit: Button
     private lateinit var progressBar: ProgressBar
 
     // 从 Intent 传入的参数
@@ -41,6 +42,7 @@ class ScriptDetailActivity : AppCompatActivity() {
     private var comSummary: String = ""
     private var idType: String = ""  // 最后一位字母
     private var existingScript: String = ""  // 已提交时从 topical_detail 读到的原 script
+    private var vetStatue: Int = 0  // 当前 vet_statue（0/null=未审，1=提交宣传主管部门，2=提交业务主管部门）
 
     @Volatile
     private var isLoading = false
@@ -89,6 +91,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         tvCharCount = findViewById(R.id.tv_char_count)
         btnSave = findViewById(R.id.btn_save)
         btnSubmit = findViewById(R.id.btn_submit)
+        btnAudit = findViewById(R.id.btn_audit)
         progressBar = findViewById(R.id.progress_bar)
 
         // 顶部状态栏
@@ -122,6 +125,9 @@ class ScriptDetailActivity : AppCompatActivity() {
             if (isSubmittedMode) updateScript() else submitScript()
         }
 
+        // 提交审核按钮 - UPDATE topical_detail.vet_statue = 1
+        btnAudit.setOnClickListener { submitAudit() }
+
         // 已提交模式：隐藏保存按钮，仅保留“提交修改”入库
         if (isSubmittedMode) {
             btnSave.visibility = View.GONE
@@ -151,15 +157,16 @@ class ScriptDetailActivity : AppCompatActivity() {
                         comSummary = csRows[0].get(1).toString().removeSurrounding("[", "]").trim()
                     }
 
-                    // 2. 已提交模式：从 topical_detail 查出原 script
+                    // 2. 已提交模式：从 topical_detail 查出原 script 和 vet_statue
                     if (isSubmittedMode && idDetail.isNotEmpty()) {
                         val escIdDetail = idDetail.replace("'", "''")
                         val rsTd = conn.query(
-                            "SELECT script FROM topical_detail WHERE id_detail = '$escIdDetail' LIMIT 1"
+                            "SELECT script, vet_statue FROM topical_detail WHERE id_detail = '$escIdDetail' LIMIT 1"
                         )
                         val tdRows = rsTd.toList()
                         if (tdRows.isNotEmpty()) {
                             existingScript = tdRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                            vetStatue = tdRows[0].get(1).toString().toIntOrNull() ?: 0
                         }
                     }
                 }
@@ -178,6 +185,9 @@ class ScriptDetailActivity : AppCompatActivity() {
                         // 未提交模式：尝试加载暂存内容
                         loadDraft()
                     }
+
+                    // 更新提交审核按钮状态
+                    updateAuditButtonState()
 
                     isLoading = false
                 }
@@ -356,5 +366,77 @@ class ScriptDetailActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+
+    // 提交审核：UPDATE topical_detail.vet_statue = 1
+    private fun submitAudit() {
+        if (idDetail.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("提示")
+                .setMessage("未找到脚本主键 id_detail，无法提交审核")
+                .setPositiveButton("确定", null)
+                .show()
+            return
+        }
+
+        if (isLoading) return
+        isLoading = true
+        progressBar.visibility = View.VISIBLE
+
+        Thread {
+            try {
+                Db.withConnection { conn ->
+                    val escIdDetail = idDetail.replace("'", "''")
+                    val updateSql = "UPDATE topical_detail SET vet_statue = 1 " +
+                        "WHERE id_detail = '$escIdDetail'"
+                    conn.execute(updateSql)
+                }
+
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    isLoading = false
+                    vetStatue = 1
+                    updateAuditButtonState()
+
+                    AlertDialog.Builder(this@ScriptDetailActivity)
+                        .setTitle("提交成功")
+                        .setMessage("已提交宣传主管部门审核")
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    isLoading = false
+                    AlertDialog.Builder(this@ScriptDetailActivity)
+                        .setTitle("提交失败")
+                        .setMessage("${e.javaClass.simpleName}\n${e.message}")
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
+        }.start()
+    }
+
+    // 更新提交审核按钮显示与状态
+    private fun updateAuditButtonState() {
+        when (vetStatue) {
+            1 -> {
+                btnAudit.text = "提交审核(已提交宣传)"
+                btnAudit.isEnabled = false
+                btnAudit.alpha = 0.5f
+            }
+            2 -> {
+                btnAudit.text = "提交审核(已提交业务)"
+                btnAudit.isEnabled = false
+                btnAudit.alpha = 0.5f
+            }
+            else -> {
+                // 0 或 null：未审核
+                btnAudit.text = "提交审核(待审)"
+                btnAudit.isEnabled = true
+                btnAudit.alpha = 1.0f
+            }
+        }
     }
 }

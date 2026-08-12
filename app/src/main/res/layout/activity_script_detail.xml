@@ -249,11 +249,21 @@
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:text="提交"
             android:textSize="15sp"
             android:textColor="#FFFFFF"
             android:background="@drawable/bg_topic_btn_blue" />
+
+        <Button
+            android:id="@+id/btn_audit"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="提交审核(待审)"
+            android:textSize="13sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_topic_btn_red" />
     </LinearLayout>
 
     <!-- 加载进度条 -->

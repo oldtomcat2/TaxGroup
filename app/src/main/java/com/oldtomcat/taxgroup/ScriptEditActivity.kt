@@ -6,7 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -14,15 +14,26 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
+
+// 扁平化列表项：部门标题 或 脚本项
+data class ScriptListEntry(
+    val depName: String = "",
+    val count: Int = 0,
+    val scriptItem: ScriptItem? = null
+) {
+    val isHeader: Boolean get() = scriptItem == null
+}
 
 data class ScriptItem(
-    val idJoined: String,     // 隐藏传递用
-    val idJoinedList: String, // id_joined + 字母（显示用，调试用）
+    val idJoined: String,
+    val idJoinedList: String,
     val idCom: String,
     val comTitle: String,
-    val isSubmitted: Boolean, // true=已提交，false=未提交
-    val typeName: String?,    // 类型名称（从 topical_type 查，level>1 时显示）
-    val idDetail: String = "" // topical_detail.id_detail主键（已提交时已存在；未提交时为空）
+    val isSubmitted: Boolean,
+    val typeName: String?,
+    val idDetail: String = "",
+    val departName: String = ""  // 部门名称（从 Department 表查）
 )
 
 class ScriptEditActivity : AppCompatActivity() {
@@ -36,9 +47,10 @@ class ScriptEditActivity : AppCompatActivity() {
     private lateinit var tvEmpty: TextView
     private lateinit var progressBar: ProgressBar
 
-    private var currentMode: Int = MODE_EDIT  // 0=脚本编辑，1=脚本查询
+    private var currentMode: Int = MODE_EDIT
     private var submittedList: List<ScriptItem> = emptyList()
     private var draftList: List<ScriptItem> = emptyList()
+    private val flatList = mutableListOf<ScriptListEntry>()
 
     @Volatile
     private var isLoading = false
@@ -46,6 +58,8 @@ class ScriptEditActivity : AppCompatActivity() {
     companion object {
         const val MODE_EDIT = 0
         const val MODE_QUERY = 1
+        const val TYPE_HEADER = 0
+        const val TYPE_ITEM = 1
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,11 +72,9 @@ class ScriptEditActivity : AppCompatActivity() {
             insets
         }
 
-        // 顶部状态栏
         findViewById<TextView>(R.id.tv_user_name).text = MyApp.loginName
         findViewById<TextView>(R.id.tv_depart).text = MyApp.loginDeaprtName
 
-        // 初始化控件
         btnScriptEdit = findViewById(R.id.btn_script_edit)
         btnScriptQuery = findViewById(R.id.btn_script_query)
         tvHint = findViewById(R.id.tv_hint)
@@ -74,7 +86,6 @@ class ScriptEditActivity : AppCompatActivity() {
 
         rvScripts.layoutManager = LinearLayoutManager(this)
 
-        // 顶部按钮
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
         findViewById<View>(R.id.btn_home).setOnClickListener {
             val intent = android.content.Intent(this, HomeMenuActivity::class.java)
@@ -84,19 +95,17 @@ class ScriptEditActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.btn_refresh_top).setOnClickListener { loadData() }
 
-        // 功能按钮
         btnScriptEdit.setOnClickListener {
             currentMode = MODE_EDIT
             updateButtonStyle()
-            displayList()
+            buildFlatList()
         }
         btnScriptQuery.setOnClickListener {
             currentMode = MODE_QUERY
             updateButtonStyle()
-            displayList()
+            buildFlatList()
         }
 
-        // 初始加载
         updateButtonStyle()
         loadData()
     }
@@ -130,17 +139,16 @@ class ScriptEditActivity : AppCompatActivity() {
             try {
                 val submitted = mutableListOf<ScriptItem>()
                 val draft = mutableListOf<ScriptItem>()
+                val depNameCache = mutableMapOf<String, String>()
 
                 Db.withConnection { conn ->
-                    // 1. 查 joined_topical 中 ps 为1 （选题已审核，脚本待编辑）的记录
-                    //    loginDepLevel<3 查所有，level>=3 查本部门（再按 id_joined_dep 过滤）
                     val escDep = dep.replace("'", "''")
                     val sqlJt = if (level >= 3) {
                         "SELECT id_joined, id_com, id_joined_dep, type_list FROM joined_topical " +
                         "WHERE ps = 1 AND id_joined_dep = '$escDep'"
                     } else {
                         "SELECT id_joined, id_com, id_joined_dep, type_list FROM joined_topical " +
-                        "WHERE ps = 1 "
+                        "WHERE ps = 1"
                     }
                     val rsJt = conn.query(sqlJt)
                     val jtRows = rsJt.toList()
@@ -156,14 +164,24 @@ class ScriptEditActivity : AppCompatActivity() {
                         return@withConnection
                     }
 
-                    // 2. 将 type_list 分解成单个字母，id_joined+字母 -> id_joined_list
                     for (jtRow in jtRows) {
                         val idJoined = jtRow.get(0).toString().removeSurrounding("[", "]").trim()
                         val idCom = jtRow.get(1).toString().removeSurrounding("[", "]").trim()
                         val idJoinedDep = jtRow.get(2).toString().removeSurrounding("[", "]").trim()
                         val typeListStr = jtRow.get(3).toString().removeSurrounding("[", "]").trim()
 
-                        // type_list 分解成单个字母
+                        // 查部门名称（缓存）
+                        val depName = depNameCache.getOrPut(idJoinedDep) {
+                            val escIdDep = idJoinedDep.replace("'", "''")
+                            val rsDep = conn.query("SELECT name_dep FROM Department WHERE id_dep = '$escIdDep' LIMIT 1")
+                            val depRows = rsDep.toList()
+                            if (depRows.isNotEmpty()) {
+                                depRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                            } else {
+                                idJoinedDep
+                            }
+                        }
+
                         val letters = typeListStr.replace("\"", "").replace("'", "").replace("[", "").replace("]", "")
                             .trim().split("").filter { it.isNotBlank() }
 
@@ -171,10 +189,9 @@ class ScriptEditActivity : AppCompatActivity() {
                             val idJoinedList = idJoined + letter
                             val escIdCom = idCom.replace("'", "''")
                             val escIdDep = idJoinedDep.replace("'", "''")
-                            val escIdJoinedList = idJoinedList.replace("'", "''")
+                            val escLetter = letter.replace("'", "''")
 
-                            // 3. 通过 id_com 查 commission_summary 的 com_title
-                            val rsCs = conn.query("SELECT com_title FROM commission_summary WHERE id_com = '$escIdCom'  AND vet = 1")
+                            val rsCs = conn.query("SELECT com_title FROM commission_summary WHERE id_com = '$escIdCom' AND vet = 1")
                             val csRows = rsCs.toList()
                             val comTitle = if (csRows.isNotEmpty()) {
                                 csRows[0].get(0).toString().removeSurrounding("[", "]").trim()
@@ -182,7 +199,6 @@ class ScriptEditActivity : AppCompatActivity() {
                                 ""
                             }
 
-                            // 4. 从 topical_detail 查前13位 id_detail，条件 id_joined_dep 相同
                             val idDetailPrefix = idJoinedList.take(13)
                             val rsTd = conn.query(
                                 "SELECT id_detail FROM topical_detail WHERE id_detail LIKE '$idDetailPrefix%' AND id_joined_dep = '$escIdDep' LIMIT 1"
@@ -195,8 +211,6 @@ class ScriptEditActivity : AppCompatActivity() {
                                 ""
                             }
 
-                            // 5. 查 topical_type：字母对应，level>1 时取 type_name
-                            val escLetter = letter.replace("'", "''")
                             val rsType = conn.query(
                                 "SELECT type_name FROM topical_type WHERE topical_type = '$escLetter' AND level > 1 LIMIT 1"
                             )
@@ -207,7 +221,6 @@ class ScriptEditActivity : AppCompatActivity() {
                                 null
                             }
 
-                            // level < 2 的不显示（typeName 为 null 时跳过）
                             if (typeName == null) continue
 
                             val item = ScriptItem(
@@ -217,7 +230,8 @@ class ScriptEditActivity : AppCompatActivity() {
                                 comTitle = comTitle,
                                 isSubmitted = isSubmitted,
                                 typeName = typeName,
-                                idDetail = idDetail
+                                idDetail = idDetail,
+                                departName = depName
                             )
 
                             if (isSubmitted) submitted.add(item) else draft.add(item)
@@ -232,7 +246,7 @@ class ScriptEditActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     tvSubmittedCount.text = submitted.size.toString()
                     tvDraftCount.text = draft.size.toString()
-                    displayList()
+                    buildFlatList()
                     isLoading = false
                 }
             } catch (e: Exception) {
@@ -249,72 +263,109 @@ class ScriptEditActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun displayList() {
-        val allItems = when (currentMode) {
-            MODE_EDIT -> draftList + submittedList  // 脚本编辑：未提交在前
-            MODE_QUERY -> submittedList + draftList  // 脚本查询：已提交在前
+    private fun buildFlatList() {
+        flatList.clear()
+
+        val sourceItems = when (currentMode) {
+            MODE_EDIT -> draftList + submittedList
+            MODE_QUERY -> submittedList + draftList
             else -> emptyList()
         }
 
-        if (allItems.isEmpty()) {
+        if (sourceItems.isEmpty()) {
             rvScripts.visibility = View.GONE
             tvEmpty.visibility = View.VISIBLE
-        } else {
-            rvScripts.visibility = View.VISIBLE
-            tvEmpty.visibility = View.GONE
-            rvScripts.adapter = ScriptItemAdapter(allItems) { item ->
-                val intent = android.content.Intent(this@ScriptEditActivity, ScriptDetailActivity::class.java)
-                    .putExtra(ScriptDetailActivity.EXTRA_ID_COM, item.idCom)
-                    .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED, item.idJoined)
-                    .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED_LIST, item.idJoinedList)
-                    .putExtra(ScriptDetailActivity.EXTRA_TYPE_NAME, item.typeName ?: "")
-                    .putExtra(ScriptDetailActivity.EXTRA_IS_SUBMITTED, item.isSubmitted)
-                    .putExtra(ScriptDetailActivity.EXTRA_ID_DETAIL, item.idDetail)
-                startActivity(intent)
+            rvScripts.adapter = null
+            return
+        }
+
+        rvScripts.visibility = View.VISIBLE
+        tvEmpty.visibility = View.GONE
+
+        // 按部门分组并平化
+        val grouped = sourceItems.groupBy { it.departName }.toSortedMap()
+        for ((depName, items) in grouped) {
+            flatList.add(ScriptListEntry(depName = depName, count = items.size))
+            for (item in items) {
+                flatList.add(ScriptListEntry(scriptItem = item))
             }
+        }
+
+        rvScripts.adapter = ScriptListAdapter(flatList) { item ->
+            val intent = android.content.Intent(this@ScriptEditActivity, ScriptDetailActivity::class.java)
+                .putExtra(ScriptDetailActivity.EXTRA_ID_COM, item.idCom)
+                .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED, item.idJoined)
+                .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED_LIST, item.idJoinedList)
+                .putExtra(ScriptDetailActivity.EXTRA_TYPE_NAME, item.typeName ?: "")
+                .putExtra(ScriptDetailActivity.EXTRA_IS_SUBMITTED, item.isSubmitted)
+                .putExtra(ScriptDetailActivity.EXTRA_ID_DETAIL, item.idDetail)
+            startActivity(intent)
         }
     }
 
     // ==================== RecyclerView Adapter ====================
-    inner class ScriptItemAdapter(
-        private val items: List<ScriptItem>,
+    inner class ScriptListAdapter(
+        private val items: List<ScriptListEntry>,
         private val onItemClick: (ScriptItem) -> Unit
-    ) : RecyclerView.Adapter<ScriptItemAdapter.ViewHolder>() {
+    ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-        inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            val statusIndicator: View = itemView.findViewById(R.id.status_indicator)
-            val tvScriptTitle: TextView = itemView.findViewById(R.id.tv_script_title)
-            val tvTypeTags: TextView = itemView.findViewById(R.id.tv_type_tags)
-            val tvStatus: TextView = itemView.findViewById(R.id.tv_status)
+        inner class HeaderVH(val root: android.widget.LinearLayout) : RecyclerView.ViewHolder(root) {
+            val tvName: TextView = root.findViewById(R.id.tv_department_name)
+            val tvCount: TextView = root.findViewById(R.id.tv_count)
+            val ivExpand: ImageView = root.findViewById(R.id.iv_expand)
+            val card: MaterialCardView = root.findViewById(R.id.card_department)
         }
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val v = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_script_topic, parent, false)
-            return ViewHolder(v)
+        inner class ItemVH(val card: MaterialCardView) : RecyclerView.ViewHolder(card) {
+            val statusIndicator: View = card.findViewById(R.id.status_indicator)
+            val tvScriptTitle: TextView = card.findViewById(R.id.tv_script_title)
+            val tvTypeTags: TextView = card.findViewById(R.id.tv_type_tags)
+            val tvStatus: TextView = card.findViewById(R.id.tv_status)
         }
 
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val item = items[position]
+        override fun getItemViewType(position: Int): Int =
+            if (items[position].isHeader) TYPE_HEADER else TYPE_ITEM
 
-            holder.tvScriptTitle.text = item.comTitle.ifEmpty { "[无标题]" }
-            // typeName 不为空时显示 typeName，否则显示编号
-            val displayTag = item.typeName ?: "编号：${item.idJoinedList}"
-            holder.tvTypeTags.text = displayTag
-
-            if (item.isSubmitted) {
-                holder.statusIndicator.setBackgroundColor(0xFF1976D2.toInt())
-                holder.tvStatus.text = "已提交"
-                holder.tvStatus.setBackgroundColor(0xFF1976D2.toInt())
-                holder.tvStatus.setTextColor(0xFFFFFFFF.toInt())
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val inflater = LayoutInflater.from(parent.context)
+            return if (viewType == TYPE_HEADER) {
+                val v = inflater.inflate(R.layout.item_department_group, parent, false)
+                HeaderVH(v as android.widget.LinearLayout)
             } else {
-                holder.statusIndicator.setBackgroundColor(0xFFFF6F00.toInt())
-                holder.tvStatus.text = "未提交"
-                holder.tvStatus.setBackgroundColor(0xFFFF6F00.toInt())
-                holder.tvStatus.setTextColor(0xFFFFFFFF.toInt())
+                val v = inflater.inflate(R.layout.item_script_topic, parent, false)
+                ItemVH(v as MaterialCardView)
             }
+        }
 
-            holder.itemView.setOnClickListener { onItemClick(item) }
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            val entry = items[position]
+            if (entry.isHeader) {
+                val h = holder as HeaderVH
+                h.tvName.text = entry.depName
+                h.tvCount.text = "${entry.count} 条"
+                h.ivExpand.rotation = 0f
+                h.card.setOnClickListener(null)
+            } else {
+                val item = entry.scriptItem!!
+                val h = holder as ItemVH
+                h.tvScriptTitle.text = item.comTitle.ifEmpty { "[无标题]" }
+                val displayTag = item.typeName ?: "编号：${item.idJoinedList}"
+                h.tvTypeTags.text = displayTag
+
+                if (item.isSubmitted) {
+                    h.statusIndicator.setBackgroundColor(0xFF1976D2.toInt())
+                    h.tvStatus.text = "已提交"
+                    h.tvStatus.setBackgroundColor(0xFF1976D2.toInt())
+                    h.tvStatus.setTextColor(0xFFFFFFFF.toInt())
+                } else {
+                    h.statusIndicator.setBackgroundColor(0xFFFF6F00.toInt())
+                    h.tvStatus.text = "未提交"
+                    h.tvStatus.setBackgroundColor(0xFFFF6F00.toInt())
+                    h.tvStatus.setTextColor(0xFFFFFFFF.toInt())
+                }
+
+                h.card.setOnClickListener { onItemClick(item) }
+            }
         }
 
         override fun getItemCount() = items.size

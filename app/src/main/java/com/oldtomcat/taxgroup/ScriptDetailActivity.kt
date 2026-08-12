@@ -132,6 +132,9 @@ class ScriptDetailActivity : AppCompatActivity() {
         if (isSubmittedMode) {
             btnSave.visibility = View.GONE
             btnSubmit.text = "提交修改"
+        } else {
+            // 未提交模式：隐藏提交审核按钮（还未入库，无 vet_statue）
+            btnAudit.visibility = View.GONE
         }
 
         // 加载数据

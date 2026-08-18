@@ -1,7 +1,7 @@
 {
-  "versionCode": 102,
-  "versionName": "1.0.0-beta3",
-  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta3/app-debug.apk",
-  "changelog": "v1.0.0-beta3 更新：\n- 已提交/未提交脚本均可进入详情页编辑\n- 已提交项仅保留「提交修改」按钮\n- 登录页显示当前版本号\n- 脚本编辑功能优化",
+  "versionCode": 103,
+  "versionName": "1.0.0-beta4",
+  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta4/app-debug.apk",
+  "changelog": "v1.0.0-beta4 更新：\n审核功能重构：\n- 新增部门审核详情页（DepartmentAuditDetailActivity）\n- 脚本审核页支持只读/编辑模式动态切换\n- 选题审核页支持宣传/业务审核切换\n- 按年月筛选审核记录\n- 业务审核 SQL JOIN 重写（单查询替代 N+1 循环）\n脚本编辑页改造：\n- 删除脚本编辑/查询双按钮\n- 新增年月 Spinner + 未提交/已提交/所有筛选\n- 按部门名称分组展示\nExcel 导出：\n- FileProvider 导出到应用专属目录（无需存储权限）\n- 导出后自动打开文件\n- 修复空 type_name 重复记录问题",
   "forceUpdate": false
 }

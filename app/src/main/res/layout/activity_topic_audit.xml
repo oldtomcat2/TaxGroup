@@ -69,18 +69,38 @@
             android:tint="#FFFFFF" />
     </LinearLayout>
 
-    <!-- 标题 -->
-    <TextView
+    <!-- Tab 切换 -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="选题审核"
-        android:textSize="18sp"
-        android:textColor="#1976D2"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:padding="16dp" />
+        android:orientation="horizontal"
+        android:padding="12dp">
 
-    <!-- 提示信息 -->
+        <Button
+            android:id="@+id/btn_tab_topic"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="选题审核"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:background="#1976D2"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btn_tab_script"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="脚本审核"
+            android:textSize="14sp"
+            android:background="#E0E0E0"
+            android:textColor="#666666" />
+    </LinearLayout>
+
+    <!-- 提示信息（脚本审核 Tab 下隐藏） -->
     <TextView
         android:id="@+id/tv_hint"
         android:layout_width="match_parent"
@@ -89,7 +109,135 @@
         android:textSize="13sp"
         android:textColor="#666666"
         android:gravity="center"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="8dp"
+        android:visibility="gone" />
+
+    <!-- 脚本审核 Tab 下的审核模式 + 年月筛选 -->
+    <LinearLayout
+        android:id="@+id/ll_audit_filter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone">
+
+        <!-- 审核模式单选（卡片式） -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="@drawable/bg_filter_card"
+            android:padding="8dp">
+
+            <!-- level=1：宣传/业务 -->
+            <RadioGroup
+                android:id="@+id/rg_audit_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:checkedButton="@+id/rb_audit_promote">
+
+                <RadioButton
+                    android:id="@+id/rb_audit_promote"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="宣传审核"
+                    android:textSize="14sp"
+                    android:textColor="#333333" />
+
+                <RadioButton
+                    android:id="@+id/rb_audit_business"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="业务审核"
+                    android:textSize="14sp"
+                    android:textColor="#333333" />
+            </RadioGroup>
+
+            <!-- level>1：vet 状态 -->
+            <RadioGroup
+                android:id="@+id/rg_vet_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:checkedButton="@+id/rb_vet_all"
+                android:visibility="gone">
+
+                <RadioButton
+                    android:id="@+id/rb_vet_pass"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="已通过"
+                    android:textSize="13sp"
+                    android:textColor="#2E7D32" />
+
+                <RadioButton
+                    android:id="@+id/rb_vet_reject"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="已退回"
+                    android:textSize="13sp"
+                    android:textColor="#C62828" />
+
+                <RadioButton
+                    android:id="@+id/rb_vet_pending"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="待审核"
+                    android:textSize="13sp"
+                    android:textColor="#1976D2" />
+
+                <RadioButton
+                    android:id="@+id/rb_vet_all"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="所有"
+                    android:textSize="13sp"
+                    android:textColor="#333333" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <!-- 年月下拉（卡片式） -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_filter_card"
+            android:padding="8dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="年月："
+                android:textSize="13sp"
+                android:textColor="#666666" />
+
+            <Spinner
+                android:id="@+id/sp_year"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_spinner" />
+
+            <Spinner
+                android:id="@+id/sp_month"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/bg_spinner" />
+        </LinearLayout>
+    </LinearLayout>
 
     <!-- 部门分组列表 -->
     <androidx.recyclerview.widget.RecyclerView

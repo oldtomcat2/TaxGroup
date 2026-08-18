@@ -74,6 +74,12 @@
         <activity
             android:name=".ScriptDetailActivity"
             android:exported="false" />
+        <activity
+            android:name=".ScriptAuditDetailActivity"
+            android:exported="false" />
+        <activity
+            android:name=".DepartmentAuditDetailActivity"
+            android:exported="false" />
 
         <!-- 版本更新安装 APK 用的 FileProvider -->
         <provider

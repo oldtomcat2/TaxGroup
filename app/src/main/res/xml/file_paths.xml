@@ -10,6 +10,11 @@
         name="external_files"
         path="Download/" />
 
+    <!-- 脚本导出文件 -->
+    <external-files-path
+        name="external_files"
+        path="Exports/" />
+
     <!-- 应用专属目录 -->
     <files-path
         name="files"

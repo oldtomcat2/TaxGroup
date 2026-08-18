@@ -162,7 +162,7 @@ class MenuAdapter(private val menus: List<MenuItem>) :
                 "选题审核" -> {
                     // 权限检查：部门 level 必须为 1（已登录时从 MyApp.loginDepLevel 取）
                     val level = MyApp.loginDepLevel
-                    if (level == 1) {
+                    if (level < 3) {
                         val intent = android.content.Intent(ctx, TopicAuditActivity::class.java)
                         ctx.startActivity(intent)
                     } else {

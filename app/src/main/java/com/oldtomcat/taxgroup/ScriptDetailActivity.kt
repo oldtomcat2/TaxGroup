@@ -9,11 +9,16 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+
+import com.google.android.material.card.MaterialCardView
 
 class ScriptDetailActivity : AppCompatActivity() {
 
@@ -29,6 +34,16 @@ class ScriptDetailActivity : AppCompatActivity() {
     private lateinit var btnAudit: Button
     private lateinit var progressBar: ProgressBar
 
+    // dep_vet 业务审核模式控件
+    private lateinit var cardDepVetAudit: MaterialCardView
+    private lateinit var etMemo: EditText
+    private lateinit var tvMemoCount: TextView
+    private lateinit var rgVetChoice: RadioGroup
+    private lateinit var rbPromote: RadioButton
+    private lateinit var rbNotMyDept: RadioButton
+    private lateinit var rbNotRecommend: RadioButton
+    private lateinit var btnDepVetSubmit: Button
+
     // 从 Intent 传入的参数
     private var idCom: String = ""
     private var idJoined: String = ""
@@ -36,6 +51,7 @@ class ScriptDetailActivity : AppCompatActivity() {
     private var typeName: String = ""
     private var isSubmittedMode: Boolean = false  // true=已提交（只可改script），false=未提交（INSERT）
     private var idDetail: String = ""              // 已提交时的主键值
+    private var fromDepVet: Boolean = false        // true=从业务待审（dep_vet）列表进入
 
     // 数据库加载的数据
     private var comTitle: String = ""
@@ -58,6 +74,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         const val EXTRA_TYPE_NAME = "type_name"
         const val EXTRA_IS_SUBMITTED = "is_submitted"
         const val EXTRA_ID_DETAIL = "id_detail"
+        const val EXTRA_FROM_DEP_VET = "from_dep_vet"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +94,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         typeName = intent.getStringExtra(EXTRA_TYPE_NAME) ?: ""
         isSubmittedMode = intent.getBooleanExtra(EXTRA_IS_SUBMITTED, false)
         idDetail = intent.getStringExtra(EXTRA_ID_DETAIL) ?: ""
+        fromDepVet = intent.getBooleanExtra(EXTRA_FROM_DEP_VET, false)
 
         // 提取最后一位字母作为 id_type
         idType = if (idJoinedList.isNotEmpty()) idJoinedList.last().toString() else ""
@@ -93,6 +111,28 @@ class ScriptDetailActivity : AppCompatActivity() {
         btnSubmit = findViewById(R.id.btn_submit)
         btnAudit = findViewById(R.id.btn_audit)
         progressBar = findViewById(R.id.progress_bar)
+
+        // dep_vet 业务审核面板
+        cardDepVetAudit = findViewById(R.id.card_dep_vet_audit)
+        etMemo = findViewById(R.id.et_memo)
+        tvMemoCount = findViewById(R.id.tv_memo_count)
+        rgVetChoice = findViewById(R.id.rg_vet_choice)
+        rbPromote = findViewById(R.id.rb_promote)
+        rbNotMyDept = findViewById(R.id.rb_not_my_dept)
+        rbNotRecommend = findViewById(R.id.rb_not_recommend)
+        btnDepVetSubmit = findViewById(R.id.btn_dep_vet_submit)
+
+        // 修改意见字数统计
+        etMemo.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val len = s?.length ?: 0
+                tvMemoCount.text = "$len/100"
+            }
+        })
+
+        btnDepVetSubmit.setOnClickListener { submitDepVetAudit() }
 
         // 顶部状态栏
         tvUserName.text = MyApp.loginName
@@ -135,6 +175,17 @@ class ScriptDetailActivity : AppCompatActivity() {
         } else {
             // 未提交模式：隐藏提交审核按钮（还未入库，无 vet_statue）
             btnAudit.visibility = View.GONE
+        }
+
+        // dep_vet 业务审核模式：隐藏原“保存/提交/提交审核”按钮，显示审核面板
+        if (fromDepVet) {
+            btnSave.visibility = View.GONE
+            btnSubmit.visibility = View.GONE
+            btnAudit.visibility = View.GONE
+            cardDepVetAudit.visibility = View.VISIBLE
+            // dep_vet 模式不修改 script，禁用 script 编辑
+            etScript.isEnabled = false
+            etScript.setBackgroundColor(0xFFF5F5F5.toInt())
         }
 
         // 加载数据
@@ -441,5 +492,80 @@ class ScriptDetailActivity : AppCompatActivity() {
                 btnAudit.alpha = 1.0f
             }
         }
+    }
+
+    // dep_vet 业务审核：UPDATE dep_vet SET vet=?, memo=? WHERE id_detail=? AND id_dep_vet=?
+    private fun submitDepVetAudit() {
+        if (idDetail.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("提示")
+                .setMessage("未找到脚本主键 id_detail，无法提交业务审核")
+                .setPositiveButton("确定", null)
+                .show()
+            return
+        }
+
+        // 必须勾选其中一个
+        if (!rbPromote.isChecked && !rbNotMyDept.isChecked && !rbNotRecommend.isChecked) {
+            AlertDialog.Builder(this)
+                .setTitle("提示")
+                .setMessage("请选择业务审核结果")
+                .setPositiveButton("确定", null)
+                .show()
+            return
+        }
+
+        val memo = etMemo.text.toString().trim()
+        val vetValue = when {
+            rbPromote.isChecked -> 1      // 可以宣传
+            rbNotMyDept.isChecked -> 2    // 非本部门业务
+            else -> 3                     // 不建议宣传
+        }
+        val vetLabel = when (vetValue) {
+            1 -> "可以宣传"
+            2 -> "非本部门业务"
+            else -> "不建议宣传"
+        }
+
+        if (isLoading) return
+        isLoading = true
+        progressBar.visibility = View.VISIBLE
+        btnDepVetSubmit.isEnabled = false
+
+        Thread {
+            try {
+                Db.withConnection { conn ->
+                    val escIdDetail = idDetail.replace("'", "''")
+                    val escIdDepVet = MyApp.loginDeaprt.replace("'", "''")
+                    val escMemo = memo.replace("'", "''")
+                    conn.execute(
+                        "UPDATE dep_vet SET vet = $vetValue, memo = '$escMemo' " +
+                        "WHERE id_detail = '$escIdDetail' AND id_dep_vet = '$escIdDepVet'"
+                    )
+                }
+
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    isLoading = false
+                    btnDepVetSubmit.isEnabled = true
+                    AlertDialog.Builder(this@ScriptDetailActivity)
+                        .setTitle("提交成功")
+                        .setMessage("业务审核结果：$vetLabel")
+                        .setPositiveButton("确定") { _, _ -> finish() }
+                        .show()
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    isLoading = false
+                    btnDepVetSubmit.isEnabled = true
+                    AlertDialog.Builder(this@ScriptDetailActivity)
+                        .setTitle("提交失败")
+                        .setMessage("${e.javaClass.simpleName}\n${e.message}")
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
+        }.start()
     }
 }

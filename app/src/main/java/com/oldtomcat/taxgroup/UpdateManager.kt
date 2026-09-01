@@ -8,7 +8,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.FileProvider
@@ -184,8 +183,11 @@ object UpdateManager {
      */
     private fun downloadAndInstall(context: Context, apkUrl: String) {
         try {
-            // 使用 App 私有目录作为下载路径，不需要 WRITE_EXTERNAL_STORAGE 权限
-            val privateDir = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "")
+            // 使用 App 内部私有目录作为下载路径：
+            // 1) 任何 Android 版本都能稳定访问（getFilesDir() = /data/data/<pkg>/files/）
+            // 2) 无需 WRITE_EXTERNAL_STORAGE 权限
+            // 3) FileProvider 用 <files-path> 一定能找到
+            val privateDir = File(context.filesDir, "Download")
             if (!privateDir.exists()) privateDir.mkdirs()
             val target = File(privateDir, APK_FILE_NAME)
             if (target.exists()) target.delete()

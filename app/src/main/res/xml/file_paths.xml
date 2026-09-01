@@ -1,22 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- DownloadManager 下载到公共下载目录的 APK -->
-    <external-path
-        name="external_download"
-        path="Download/" />
+    <!--
+        FileProvider 路径配置
+        UpdateManager 下载的 APK 改用内部目录 filesDir/Download/TaxGroup-update.apk
+        即 /data/data/<pkg>/files/Download/，由 <files-path> 覆盖
+    -->
 
-    <!-- 兼容 Android 10+ 范围存储 -->
-    <external-files-path
-        name="external_files"
-        path="Download/" />
-
-    <!-- 脚本导出文件 -->
-    <external-files-path
-        name="external_files"
-        path="Exports/" />
-
-    <!-- 应用专属目录 -->
+    <!-- App 内部目录 /data/data/<pkg>/files/ -->
     <files-path
-        name="files"
+        name="internal_files"
         path="." />
+
+    <!-- App 内部目录的 Download 子目录 -->
+    <files-path
+        name="internal_files_download"
+        path="Download/" />
+
+    <!-- 公共下载目录（兼容历史代码路径） -->
+    <external-path
+        name="external_public_download"
+        path="Download/" />
+
+    <!-- 公共下载根 -->
+    <external-path
+        name="external_root"
+        path="." />
+
+    <!-- App 专属外部目录 /storage/emulated/0/Android/data/<pkg>/files/ -->
+    <external-files-path
+        name="external_files"
+        path="." />
+
+    <!-- App 专属外部目录的 Download 子目录 -->
+    <external-files-path
+        name="external_files_download"
+        path="Download/" />
+
+    <!-- 脚本导出文件目录 -->
+    <external-files-path
+        name="external_files_exports"
+        path="Exports/" />
 </paths>

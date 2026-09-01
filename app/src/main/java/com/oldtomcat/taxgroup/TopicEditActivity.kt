@@ -21,6 +21,8 @@ class TopicEditActivity : AppCompatActivity() {
     private lateinit var tvRejectMemo: TextView
     private lateinit var llImportantTypes: LinearLayout
     private lateinit var llDirectionTypes: LinearLayout
+    private lateinit var llJointDeps: LinearLayout
+    private lateinit var llScriptAudit: LinearLayout
     private lateinit var btnSubmit: Button
     private lateinit var btnDelete: Button
     private lateinit var btnBackBottom: Button
@@ -73,6 +75,8 @@ class TopicEditActivity : AppCompatActivity() {
         btnDelete = findViewById(R.id.btn_delete)
         btnBackBottom = findViewById(R.id.btn_back_bottom)
         progressBar = findViewById(R.id.progress_bar)
+        llJointDeps = findViewById(R.id.ll_joint_deps)
+        llScriptAudit = findViewById(R.id.ll_script_audit)
 
         // 顶部返回
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }
@@ -213,6 +217,76 @@ class TopicEditActivity : AppCompatActivity() {
                             else if (lv == 2) typeListL2.add(Pair(code, name))
                         }
                     } catch (_: Exception) { }
+
+                    // 部门联动情况：查 id_com 下的非本部门联动部门
+                    // joined_topical (id_com, id_joined_dep) → LEFT JOIN Department (id_dep=name_dep)
+                    val jointDeps: MutableList<Pair<String, String>> = mutableListOf() // (id_dep, name_dep)
+                    try {
+                        val escIdDep = idDep.replace("'", "''")
+                        val escIdCom = idCom.replace("'", "''")
+                        val rsJoint = conn.query(
+                            "SELECT jt.id_joined_dep, d.name_dep " +
+                                "FROM joined_topical jt " +
+                                "LEFT JOIN Department d ON d.id_dep = jt.id_joined_dep " +
+                                "WHERE jt.id_com = '$escIdCom' " +
+                                "AND jt.id_joined_dep <> '$escIdDep' " +
+                                "ORDER BY jt.id_joined_dep"
+                        )
+                        val jRows = rsJoint.toList()
+                        for (jr in jRows) {
+                            val jid = jr.get(0).toString().removeSurrounding("[", "]").trim()
+                            val jname = jr.get(1).toString().removeSurrounding("[", "]").trim()
+                            jointDeps.add(Pair(jid, if (jname.isEmpty() || jname == "null") jid else jname))
+                        }
+                    } catch (_: Exception) { }
+
+                    // 脚本审核情况：查本部门 id_joined → topical_detail.id_detail 前12位
+                    // 返回 (id_type, type_name, id_detail, vet_statue) 列表
+                    data class ScriptAuditItem(val idType: String, val typeName: String, val idDetail: String, val vet: Int)
+                    val scriptAuditList: MutableList<ScriptAuditItem> = mutableListOf()
+                    try {
+                        val escIdDep2 = idDep.replace("'", "''")
+                        val escIdCom2 = idCom.replace("'", "''")
+                        // 1. 取本部门 id_joined
+                        val rsSelf = conn.query(
+                            "SELECT id_joined FROM joined_topical " +
+                                "WHERE id_com = '$escIdCom2' AND id_joined_dep = '$escIdDep2' LIMIT 1"
+                        )
+                        val sRows = rsSelf.toList()
+                        if (sRows.isNotEmpty()) {
+                            val idJoined = sRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                            if (idJoined.isNotEmpty()) {
+                                // 2. 查 topical_detail 前 12 位匹配的脚本（取 id_type）
+                                val escIdJ = idJoined.replace("'", "''")
+                                val rsTd = conn.query(
+                                    "SELECT id_type, id_detail, vet_statue FROM topical_detail " +
+                                        "WHERE substr(id_detail, 1, 12) = '$escIdJ' " +
+                                        "AND id_joined_dep = '$escIdDep2' " +
+                                        "ORDER BY id_type"
+                                )
+                                val tdRows = rsTd.toList()
+                                for (tr in tdRows) {
+                                    val idType = tr.get(0).toString().removeSurrounding("[", "]").trim()
+                                    val idDetail = tr.get(1).toString().removeSurrounding("[", "]").trim()
+                                    val vetStatue = tr.get(2).toString().removeSurrounding("[", "]").toIntOrNull() ?: 0
+                                    // 3. 联查 type_name
+                                    var typeName = idType
+                                    if (idType.isNotEmpty()) {
+                                        val escIdT = idType.replace("'", "''")
+                                        val rsTn = conn.query(
+                                            "SELECT type_name FROM topical_type WHERE topical_type = '$escIdT' LIMIT 1"
+                                        )
+                                        val tnRows = rsTn.toList()
+                                        if (tnRows.isNotEmpty()) {
+                                            typeName = tnRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                                        }
+                                    }
+                                    scriptAuditList.add(ScriptAuditItem(idType, typeName, idDetail, vetStatue))
+                                }
+                            }
+                        }
+                    } catch (_: Exception) { }
+
                     // type_list 格式可能是 "abc" 或 "[\"a\",\"b\"]" 等,统一处理成单个字符的字符串集合
                     val checkedCodes = typeListStr
                         .replace("[", "").replace("]", "")
@@ -238,6 +312,96 @@ class TopicEditActivity : AppCompatActivity() {
                                 else -> android.graphics.Color.parseColor("#EF6C00")
                             }
                         )
+
+                        // 渲染部门联动情况
+                        llJointDeps.removeAllViews()
+                        if (jointDeps.isEmpty()) {
+                            val tv = TextView(this@TopicEditActivity)
+                            tv.text = "无联动合作单位"
+                            tv.setTextColor(0xFF999999.toInt())
+                            tv.textSize = 13f
+                            tv.setPadding(0, 4, 0, 4)
+                            llJointDeps.addView(tv)
+                        } else {
+                            for ((idx, dep) in jointDeps.withIndex()) {
+                                val (jid, jname) = dep
+                                val row = LinearLayout(this@TopicEditActivity)
+                                row.orientation = LinearLayout.HORIZONTAL
+                                row.gravity = android.view.Gravity.CENTER_VERTICAL
+                                row.setPadding(0, 6, 0, 6)
+                                val nameTv = TextView(this@TopicEditActivity)
+                                nameTv.text = "${idx + 1}. $jname"
+                                nameTv.setTextColor(0xFF333333.toInt())
+                                nameTv.textSize = 14f
+                                nameTv.layoutParams = LinearLayout.LayoutParams(
+                                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                                )
+                                row.addView(nameTv)
+                                val viewBtn = Button(this@TopicEditActivity)
+                                viewBtn.text = "查看脚本"
+                                viewBtn.textSize = 12f
+                                viewBtn.setTextColor(0xFFFFFFFF.toInt())
+                                viewBtn.setBackgroundColor(0xFF1976D2.toInt())
+                                viewBtn.setPadding(20, 6, 20, 6)
+                                viewBtn.setOnClickListener {
+                                    loadAndOpenScriptForJointDep(jid, jname)
+                                }
+                                row.addView(viewBtn)
+                                llJointDeps.addView(row)
+                            }
+                        }
+
+                        // 渲染脚本审核情况
+                        llScriptAudit.removeAllViews()
+                        if (scriptAuditList.isEmpty()) {
+                            val tv = TextView(this@TopicEditActivity)
+                            tv.text = "本部门未提交脚本"
+                            tv.setTextColor(0xFF999999.toInt())
+                            tv.textSize = 13f
+                            tv.setPadding(0, 4, 0, 4)
+                            llScriptAudit.addView(tv)
+                        } else {
+                            for (item in scriptAuditList) {
+                                val row = LinearLayout(this@TopicEditActivity)
+                                row.orientation = LinearLayout.HORIZONTAL
+                                row.gravity = android.view.Gravity.CENTER_VERTICAL
+                                row.setPadding(0, 6, 0, 6)
+                                val infoTv = TextView(this@TopicEditActivity)
+                                val vetText = when (item.vet) {
+                                    1 -> "已审核"
+                                    3 -> "业务部门已审核"
+                                    2 -> "已提交业务部门审核"
+                                    4 -> "选题作废"
+                                    else -> "未提交"
+                                }
+                                infoTv.text = "${item.typeName}：$vetText"
+                                infoTv.setTextColor(when (item.vet) {
+                                    1 -> 0xFF2E7D32.toInt()
+                                    3 -> 0xFF6A1B9A.toInt()
+                                    2 -> 0xFFEF6C00.toInt()
+                                    4 -> 0xFFC62828.toInt()
+                                    else -> 0xFF999999.toInt()
+                                })
+                                infoTv.textSize = 14f
+                                infoTv.layoutParams = LinearLayout.LayoutParams(
+                                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                                )
+                                row.addView(infoTv)
+                                val viewBtn = Button(this@TopicEditActivity)
+                                viewBtn.text = "脚本查看"
+                                viewBtn.textSize = 12f
+                                viewBtn.setTextColor(0xFFFFFFFF.toInt())
+                                viewBtn.setBackgroundColor(0xFF2E7D32.toInt())
+                                viewBtn.setPadding(20, 6, 20, 6)
+                                viewBtn.setOnClickListener {
+                                    val intent = android.content.Intent(this@TopicEditActivity, ScriptViewActivity::class.java)
+                                    intent.putExtra(ScriptViewActivity.EXTRA_ID_DETAIL, item.idDetail)
+                                    startActivity(intent)
+                                }
+                                row.addView(viewBtn)
+                                llScriptAudit.addView(row)
+                            }
+                        }
                         if (hasMemo) {
                             llRejectMemo.visibility = View.VISIBLE
                             tvRejectMemo.text = rejectMemo
@@ -309,6 +473,142 @@ class TopicEditActivity : AppCompatActivity() {
                 }
             }
         }.start()
+    }
+
+    /**
+     * 联动部门"查看脚本"：
+     * 1. 通过 id_com + 联动部门 id_joined_dep 查 joined_topical.id_joined
+     * 2. 用 id_joined 作为前缀查 topical_detail.id_detail（前 12 位匹配）
+     * 3. 拿到第 13 位字母（id_type），联查 topical_type.type_name
+     * 4. 找到则启动 ScriptViewActivity；多个则弹选择
+     */
+    private fun loadAndOpenScriptForJointDep(jointDepId: String, jointDepName: String) {
+        if (isLoading) return
+        isLoading = true
+        progressBar.visibility = View.VISIBLE
+
+        val escIdCom = idCom.replace("'", "''")
+        val escJointDep = jointDepId.replace("'", "''")
+
+        Thread {
+            try {
+                Db.withConnection { conn ->
+                    // 1. 联动部门的 id_joined
+                    val rsJ = conn.query(
+                        "SELECT id_joined FROM joined_topical " +
+                            "WHERE id_com = '$escIdCom' AND id_joined_dep = '$escJointDep' LIMIT 1"
+                    )
+                    val jRows = rsJ.toList()
+                    if (jRows.isEmpty()) {
+                        runOnUiThread {
+                            progressBar.visibility = View.GONE
+                            isLoading = false
+                            AlertDialog.Builder(this@TopicEditActivity)
+                                .setTitle("提示")
+                                .setMessage("「$jointDepName」未加入此选题，无法查看脚本")
+                                .setPositiveButton("确定", null)
+                                .show()
+                        }
+                        return@withConnection
+                    }
+                    val idJoined = jRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                    if (idJoined.isEmpty()) {
+                        runOnUiThread {
+                            progressBar.visibility = View.GONE
+                            isLoading = false
+                            AlertDialog.Builder(this@TopicEditActivity)
+                                .setTitle("提示")
+                                .setMessage("「$jointDepName」未提交脚本")
+                                .setPositiveButton("确定", null)
+                                .show()
+                        }
+                        return@withConnection
+                    }
+
+                    // 2. 查 topical_detail 中前 12 位匹配的所有脚本
+                    val escJ = idJoined.replace("'", "''")
+                    val rsTd = conn.query(
+                        "SELECT id_type, id_detail FROM topical_detail " +
+                            "WHERE substr(id_detail, 1, 12) = '$escJ' " +
+                            "AND id_joined_dep = '$escJointDep' " +
+                            "ORDER BY id_type"
+                    )
+                    val tdRows = rsTd.toList()
+                    if (tdRows.isEmpty()) {
+                        runOnUiThread {
+                            progressBar.visibility = View.GONE
+                            isLoading = false
+                            AlertDialog.Builder(this@TopicEditActivity)
+                                .setTitle("提示")
+                                .setMessage("「$jointDepName」未提交脚本")
+                                .setPositiveButton("确定", null)
+                                .show()
+                        }
+                        return@withConnection
+                    }
+
+                    // 3. 对每行用第 13 位字母查 type_name
+                    data class ScriptChoice(val idDetail: String, val typeName: String)
+                    val choices = mutableListOf<ScriptChoice>()
+                    for (tr in tdRows) {
+                        val idType = tr.get(0).toString().removeSurrounding("[", "]").trim()
+                        val idDetail = tr.get(1).toString().removeSurrounding("[", "]").trim()
+                        // 第 13 位字母作为 id_type（也可能直接用 id_type 字段）
+                        val typeLetter = if (idDetail.length >= 13) idDetail.substring(12, 13) else idType
+                        var typeName = typeLetter
+                        if (typeLetter.isNotEmpty()) {
+                            val escL = typeLetter.replace("'", "''")
+                            val rsTn = conn.query(
+                                "SELECT type_name FROM topical_type WHERE topical_type = '$escL' LIMIT 1"
+                            )
+                            val tnRows = rsTn.toList()
+                            if (tnRows.isNotEmpty()) {
+                                typeName = tnRows[0].get(0).toString().removeSurrounding("[", "]").trim()
+                                if (typeName.isEmpty()) typeName = typeLetter
+                            }
+                        }
+                        choices.add(ScriptChoice(idDetail, typeName))
+                    }
+
+                    runOnUiThread {
+                        progressBar.visibility = View.GONE
+                        isLoading = false
+                        if (choices.size == 1) {
+                            openScriptView(choices[0].idDetail, choices[0].typeName, jointDepName)
+                        } else {
+                            // 多个脚本，弹选择
+                            val labels = choices.map { it.typeName }.toTypedArray()
+                            AlertDialog.Builder(this@TopicEditActivity)
+                                .setTitle("选择脚本")
+                                .setItems(labels) { _, which ->
+                                    val c = choices[which]
+                                    openScriptView(c.idDetail, c.typeName, jointDepName)
+                                }
+                                .setNegativeButton("取消", null)
+                                .show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    isLoading = false
+                    AlertDialog.Builder(this@TopicEditActivity)
+                        .setTitle("加载失败")
+                        .setMessage("${e.javaClass.simpleName}\n${e.message}")
+                        .setPositiveButton("确定", null)
+                        .show()
+                }
+            }
+        }.start()
+    }
+
+    private fun openScriptView(idDetail: String, typeName: String, depName: String) {
+        val intent = android.content.Intent(this, ScriptViewActivity::class.java)
+        intent.putExtra(ScriptViewActivity.EXTRA_ID_DETAIL, idDetail)
+        intent.putExtra("type_name", typeName)
+        intent.putExtra("dep_name", depName)
+        startActivity(intent)
     }
 
     private fun submitChanges() {

@@ -519,9 +519,9 @@ class ScriptAuditDetailActivity : AppCompatActivity() {
 
                     when (selectedId) {
                         R.id.rb_pass -> {
-                            // 宣传中心修改通过 → vet_statue=3
+                            // 宣传中心修改通过 → vet_statue=1
                             conn.execute(
-                                "UPDATE topical_detail SET script = '$escScript', vet_statue = 3 " +
+                                "UPDATE topical_detail SET script = '$escScript', vet_statue = 1 " +
                                     "WHERE id_detail = '$escIdDetail'"
                             )
                         }

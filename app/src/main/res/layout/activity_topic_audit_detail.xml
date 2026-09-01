@@ -71,6 +71,7 @@
 
     <!-- 页面标题 -->
     <TextView
+        android:id="@+id/tv_page_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="选题审核详情"
@@ -344,8 +345,60 @@
                         android:paddingStart="8dp"
                         android:paddingEnd="0dp"
                         android:layout_marginTop="4dp" />
+
+                    <RadioButton
+                        android:id="@+id/rb_transfer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="转业务部门审阅"
+                        android:textSize="15sp"
+                        android:textColor="#333333"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="0dp"
+                        android:layout_marginTop="4dp" />
                 </RadioGroup>
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- 转业务部门区域（条件显示） -->
+            <LinearLayout
+                android:id="@+id/ll_transfer_dep"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="转业务部门"
+                    android:textSize="14sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="6dp" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="1dp"
+                    app:cardBackgroundColor="#FFFFFF">
+
+                    <LinearLayout
+                        android:id="@+id/ll_department_checkboxes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="加载中..."
+                            android:textSize="13sp"
+                            android:textColor="#999999" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
 
             <!-- 不予通过理由（条件显示） -->
             <LinearLayout

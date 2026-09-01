@@ -2,6 +2,6 @@
   "versionCode": 103,
   "versionName": "1.0.0-beta4",
   "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta4/app-debug.apk",
-  "changelog": "v1.0.0-beta4 更新：\n审核功能重构：\n- 新增部门审核详情页（DepartmentAuditDetailActivity）\n- 脚本审核页支持只读/编辑模式动态切换\n- 选题审核页支持宣传/业务审核切换\n- 按年月筛选审核记录\n- 业务审核 SQL JOIN 重写（单查询替代 N+1 循环）\n脚本编辑页改造：\n- 删除脚本编辑/查询双按钮\n- 新增年月 Spinner + 未提交/已提交/所有筛选\n- 按部门名称分组展示\nExcel 导出：\n- FileProvider 导出到应用专属目录（无需存储权限）\n- 导出后自动打开文件\n- 修复空 type_name 重复记录问题",
+  "changelog": "v1.0.0-beta4 更新：\n审核功能重构：\n- 新增部门审核详情页（DepartmentAuditDetailActivity）\n- 脚本审核页支持只读/编辑模式动态切换\n- 选题审核页支持宣传/业务审核切换\n- 按年月筛选审核记录\n- 业务审核 SQL JOIN 重写（单查询替代 N+1 循环）\n脚本编辑页改造：\n- 删除脚本编辑/查询双按钮\n- 新增年月 Spinner + 未提交/已提交/所有筛选\n- 按部门名称分组展示\nExcel 导出：\n- FileProvider 导出到应用专属目录（无需存储权限）\n- 导出后自动打开文件\n- 修复空 type_name 重复记录问题\n---\nv1.0.0-beta4（本次构建）更新：\n选题审核：\n- 部门审核列表新增从 topical_review 表拉取数据\n- 业务部门审核时可查看选题详情并提交审核结果\n- 转业务部门审阅失败时自动回退 vet=0\n- 显示各部门审核状态（待审核/通过/不予通过/非本部门退回）\n脚本列表：\n- 状态标签中文化：Draft→未提交，Submitted→已提交\n选题编辑：\n- 联动部门后可查看该部门已提交的脚本内容\n- 支持单脚本直接打开、多脚本选择后打开\n- 脚本查看页显示类型·部门副标题\n其他：\n- 部门审核状态映射修正",
   "forceUpdate": false
 }

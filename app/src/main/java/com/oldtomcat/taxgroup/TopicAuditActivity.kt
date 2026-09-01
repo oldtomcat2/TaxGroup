@@ -30,7 +30,8 @@ data class AuditTopicItem(
     val idDep: String = "",  // 部门ID(脚本审核用,赋值前为"")
     val vetStatus: Int = Int.MIN_VALUE,  // dep_vet.vet,不适用时取 Int.MIN_VALUE
     val idDetail: String = "",  // 脚本详情用 ID(topical_detail.id_detail)
-    val idJoinedDep: String = ""  // 报送单位 ID(topical_detail.id_joined_dep)
+    val idJoinedDep: String = "",  // 报送单位 ID(topical_detail.id_joined_dep)
+    val isFromTopicReview: Boolean = false  // 是否来自topical_review（选题审核推送）
 )
 
 // 部门分组数据
@@ -323,11 +324,11 @@ class TopicAuditActivity : AppCompatActivity() {
         }.start()
     }
 
-    // 选题审核:vet=0/null 的 commission_summary,按 id_dep 分组
+    // 选题审核:vet不为1（通过）、2（不通过）的都保持审核状态，按 id_dep 分组
     private fun loadTopicAuditGroups(conn: Db.Conn): List<DepartmentGroup> {
-        val sql = "SELECT a.id_com, a.com_title, a.id_dep, b.name_dep " +
+        val sql = "SELECT a.id_com, a.com_title, a.id_dep, b.name_dep, a.vet " +
             "FROM commission_summary a, Department b " +
-            "WHERE a.id_dep = b.id_dep AND (a.vet = 0 OR a.vet IS NULL) " +
+            "WHERE a.id_dep = b.id_dep AND (a.vet IS NULL OR (a.vet <> 1 AND a.vet <> 2)) " +
             "ORDER BY b.name_dep, a.id_com DESC"
         val rs = conn.query(sql)
         val rows = rs.toList()
@@ -340,10 +341,12 @@ class TopicAuditActivity : AppCompatActivity() {
             val comTitle = row.get(1).toString().removeSurrounding("[", "]")
             val idDep = row.get(2).toString().removeSurrounding("[", "]")
             val nameDep = row.get(3).toString().removeSurrounding("[", "]")
+            val rawVet = row.get(4).toString().removeSurrounding("[", "]")
+            val vetStatus = rawVet.toIntOrNull() ?: 0
 
             val month = if (idCom.length >= 4) idCom.substring(2, 4) else "--"
 
-            val item = AuditTopicItem(idCom, comTitle, month, idDep)
+            val item = AuditTopicItem(idCom, comTitle, month, idDep, vetStatus = vetStatus)
             if (!groupMap.containsKey(idDep)) {
                 groupMap[idDep] = mutableListOf()
                 depNameMap[idDep] = nameDep
@@ -433,6 +436,7 @@ class TopicAuditActivity : AppCompatActivity() {
     //      → JOIN Department(取 id_dep_vet 名称)
     //  结果按 id_dep_vet 分组,每条存 id_com、id_detail、vet
     //  level>1 用户仅看自己部门(id_dep_vet = loginDep);level<=1 看全部
+    //  同时加入topical_review中review_vet=0的记录（选题审核推送）
     private fun loadBusinessAuditGroups(conn: Db.Conn): List<DepartmentGroup> {
         val ymFilter = buildYmFilter(col = "dv.id_detail")
         // vet 过滤(默认 ALL 不过滤)
@@ -468,11 +472,11 @@ class TopicAuditActivity : AppCompatActivity() {
             ORDER BY dv.id_dep_vet, dv.id_detail
         """.trimIndent()
         val rows = conn.query(sql).toList()
-        if (rows.isEmpty()) return emptyList()
 
         val items = mutableListOf<AuditTopicItem>()
         val depNameCache = mutableMapOf<String, String>()
 
+        // 处理dep_vet的记录
         for (row in rows) {
             val idDetail = row.get(0).toString().removeSurrounding("[", "]")
             val rawVet = row.get(1).toString().removeSurrounding("[", "]")
@@ -484,14 +488,15 @@ class TopicAuditActivity : AppCompatActivity() {
             val nameDep = row.get(6).toString().removeSurrounding("[", "]")
 
             items.add(
-                AuditTopicItem( 
+                AuditTopicItem(
                     idCom = idCom.ifEmpty { idDetail },
                     comTitle = comTitle,
                     month = currentMonth,
                     idDep = idDepVet,         // 分组键:审核部门(id_dep_vet)
                     vetStatus = vet,
                     idDetail = idDetail,      // 脚本详情用
-                    idJoinedDep = idJoinedDep // 报送单位 id
+                    idJoinedDep = idJoinedDep, // 报送单位 id
+                    isFromTopicReview = false // 来自dep_vet
                 )
             )
             if (idDepVet.isNotEmpty() && !depNameCache.containsKey(idDepVet)) {
@@ -499,8 +504,54 @@ class TopicAuditActivity : AppCompatActivity() {
             }
         }
 
+        // 查询topical_review中review_vet=0的记录（选题审核推送）
+        // level>1用户只看自己部门的记录
+        val topicReviewDepFilter = if (MyApp.loginDepLevel > 1) {
+            val escDep = MyApp.loginDeaprt.replace("'", "''")
+            " AND tr.id_review_dep = '$escDep'"
+        } else ""
+        val topicReviewSql = """
+            SELECT
+                tr.id_com,
+                tr.id_review_dep,
+                cs.com_title,
+                d.name_dep
+            FROM topical_review tr
+            JOIN commission_summary cs ON cs.id_com = tr.id_com
+            LEFT JOIN Department d ON d.id_dep = tr.id_review_dep
+            WHERE tr.review_vet = 0$topicReviewDepFilter
+            ORDER BY tr.id_review_dep, tr.id_com
+        """.trimIndent()
+        val topicReviewRows = conn.query(topicReviewSql).toList()
+
+        for (row in topicReviewRows) {
+            val idCom = row.get(0).toString().removeSurrounding("[", "]")
+            val idReviewDep = row.get(1).toString().removeSurrounding("[", "]")
+            val comTitle = row.get(2).toString().removeSurrounding("[", "]")
+            val nameDep = row.get(3)?.toString()?.removeSurrounding("[", "]") ?: idReviewDep
+
+            // 从id_com提取月份
+            val month = if (idCom.length >= 4) idCom.substring(2, 4) else currentMonth
+
+            items.add(
+                AuditTopicItem(
+                    idCom = idCom,
+                    comTitle = comTitle,
+                    month = month,
+                    idDep = idReviewDep,
+                    vetStatus = 0, // review_vet=0表示待审核
+                    idDetail = "", // topical_review没有id_detail
+                    idJoinedDep = "",
+                    isFromTopicReview = true // 标记来自topical_review
+                )
+            )
+            if (idReviewDep.isNotEmpty() && !depNameCache.containsKey(idReviewDep)) {
+                depNameCache[idReviewDep] = nameDep.ifEmpty { idReviewDep }
+            }
+        }
+
         if (items.isEmpty()) return emptyList()
-        // 按 id_dep_vet 分组
+        // 按 id_dep 分组
         val groupMap = items.groupBy { it.idDep }
         return groupMap.keys.sorted().map { idDep ->
             DepartmentGroup(
@@ -627,6 +678,16 @@ class TopicAuditActivity : AppCompatActivity() {
 
     // 点击脚本审核/部门审核条目进入对应详情页
     private fun openScriptAuditDetail(item: AuditTopicItem) {
+        // 来自选题审核推送的记录（topical_review），进入选题审核详情页
+        if (item.isFromTopicReview) {
+            val intent = android.content.Intent(this, TopicAuditDetailActivity::class.java)
+            intent.putExtra("id_com", item.idCom)
+            intent.putExtra("is_from_topic_review", true) // 标记来自选题审核推送
+            intent.putExtra("id_review_dep", item.idDep) // 审核部门ID（用于WHERE条件）
+            startActivity(intent)
+            return
+        }
+
         // item.idDetail = topical_detail.id_detail（详情查询主键）
         // item.idJoinedDep = 报送单位 id；item.idDep = id_dep_vet（审核部门）
         val goDept = MyApp.loginDepLevel > 1 || currentAuditMode == ScriptAuditMode.BUSINESS
@@ -716,9 +777,16 @@ class DepartmentAdapter(
                 if (group.isDeptAudit && topic.vetStatus != Int.MIN_VALUE) {
                     when (topic.vetStatus) {
                         0 -> {
-                            tvMonth.text = "待审"
-                            tvMonth.setTextColor(android.graphics.Color.parseColor("#1976D2"))
-                            tvMonth.setBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"))
+                            // 来自选题审核推送的记录，显示"选题审核"标签（醒目颜色）
+                            if (topic.isFromTopicReview) {
+                                tvMonth.text = "选题审核"
+                                tvMonth.setTextColor(android.graphics.Color.parseColor("#E65100"))
+                                tvMonth.setBackgroundColor(android.graphics.Color.parseColor("#FFF3E0"))
+                            } else {
+                                tvMonth.text = "待审"
+                                tvMonth.setTextColor(android.graphics.Color.parseColor("#1976D2"))
+                                tvMonth.setBackgroundColor(android.graphics.Color.parseColor("#E3F2FD"))
+                            }
                         }
                         1 -> {
                             tvMonth.text = "审核通过"
@@ -777,11 +845,20 @@ class DepartmentAdapter(
                     }
                 }
             } else {
-                tvMonth.text = "${topic.month}月"
-                tvMonth.setTextColor(android.graphics.Color.parseColor("#FF6F00"))
-                tvMonth.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                // 选题审核模式
+                if (topic.vetStatus == 4) {
+                    // 转业务部门审阅 - 绿色标签
+                    tvMonth.text = "转业务"
+                    tvMonth.setTextColor(android.graphics.Color.parseColor("#2E7D32"))
+                    tvMonth.setBackgroundColor(android.graphics.Color.parseColor("#E8F5E9"))
+                } else {
+                    tvMonth.text = "${topic.month}月"
+                    tvMonth.setTextColor(android.graphics.Color.parseColor("#FF6F00"))
+                    tvMonth.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                }
             }
-            tvTitle.text = topic.comTitle
+            // 来自选题审核推送的记录，标题前加"选题"标签
+            tvTitle.text = if (topic.isFromTopicReview) "【选题】${topic.comTitle}" else topic.comTitle
 
             // 业务审核 vet 徽章
             if (group.isDeptAudit && topic.vetStatus != Int.MIN_VALUE) {

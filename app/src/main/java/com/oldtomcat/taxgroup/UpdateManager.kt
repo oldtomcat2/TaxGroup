@@ -234,16 +234,19 @@ object UpdateManager {
             return
         }
 
+        // 如果不是 internal files dir，拷贝过去 (兼容老版本下载路径)
+        val target = ensureInFilesDir(context, apkFile)
+
         try {
             val apkUri: Uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 // Android 7.0+ 必须用 FileProvider
                 FileProvider.getUriForFile(
                     context,
                     "${context.packageName}.fileprovider",
-                    apkFile
+                    target
                 )
             } else {
-                Uri.fromFile(apkFile)
+                Uri.fromFile(target)
             }
 
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -253,7 +256,34 @@ object UpdateManager {
             context.startActivity(intent)
         } catch (e: Exception) {
             showResultOnMain(context, "安装失败",
-                "${e.javaClass.simpleName}: ${e.message}")
+                "${e.javaClass.simpleName}: ${e.message}\n\n文件路径：\n${target.absolutePath}")
+        }
+    }
+
+    /**
+     * 确保 APK 文件位于 filesDir 内（FileProvider 可访问的路径）。
+     * 如果传入文件已位于 filesDir 下直接返回；否则拷贝过去并返回拷贝后的文件。
+     */
+    private fun ensureInFilesDir(context: Context, apkFile: File): File {
+        val filesDir = context.filesDir
+        val apkPath = apkFile.absolutePath
+        val filesPath = filesDir.absolutePath
+        if (apkPath.startsWith(filesPath)) {
+            return apkFile
+        }
+        // 不在 filesDir，拷贝过去
+        return try {
+            val outFile = File(filesDir, "Download/$APK_FILE_NAME")
+            outFile.parentFile?.mkdirs()
+            apkFile.inputStream().use { input ->
+                outFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            outFile
+        } catch (e: Exception) {
+            android.util.Log.e("UpdateManager", "拷贝APK到filesDir失败: ${e.message}")
+            apkFile
         }
     }
 }

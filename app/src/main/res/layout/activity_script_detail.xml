@@ -375,6 +375,27 @@
             android:background="@drawable/bg_topic_btn_red" />
     </LinearLayout>
 
+    <!-- 非本部门只读时全屏返回按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btn_back_bottom"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:text="返回"
+            android:textSize="15sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/bg_topic_btn_blue" />
+    </LinearLayout>
+
     <!-- 加载进度条 -->
     <ProgressBar
         android:id="@+id/progress_bar"

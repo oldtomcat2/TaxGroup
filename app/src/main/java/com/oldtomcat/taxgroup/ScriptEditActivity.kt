@@ -41,7 +41,8 @@ data class ScriptItem(
     val isSubmitted: Boolean,
     val typeName: String?,
     val idDetail: String = "",
-    val departName: String = ""
+    val departName: String = "",
+    val idJoinedDep: String = ""
 )
 
 class ScriptEditActivity : AppCompatActivity() {
@@ -289,7 +290,8 @@ class ScriptEditActivity : AppCompatActivity() {
                                 isSubmitted = isSubmitted,
                                 typeName = typeName,
                                 idDetail = idDetail,
-                                departName = depName
+                                departName = depName,
+                                idJoinedDep = idJoinedDep
                             )
 
                             if (isSubmitted) submitted.add(item) else draft.add(item)
@@ -357,6 +359,7 @@ class ScriptEditActivity : AppCompatActivity() {
                 .putExtra(ScriptDetailActivity.EXTRA_TYPE_NAME, item.typeName ?: "")
                 .putExtra(ScriptDetailActivity.EXTRA_IS_SUBMITTED, item.isSubmitted)
                 .putExtra(ScriptDetailActivity.EXTRA_ID_DETAIL, item.idDetail)
+                .putExtra(ScriptDetailActivity.EXTRA_ID_JOINED_DEP, item.idJoinedDep)
             startActivity(intent)
         }
     }

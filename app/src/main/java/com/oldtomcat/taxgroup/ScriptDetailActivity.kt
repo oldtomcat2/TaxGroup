@@ -32,6 +32,7 @@ class ScriptDetailActivity : AppCompatActivity() {
     private lateinit var btnSave: Button
     private lateinit var btnSubmit: Button
     private lateinit var btnAudit: Button
+    private lateinit var btnBackBottom: Button
     private lateinit var progressBar: ProgressBar
 
     // dep_vet 业务审核模式控件
@@ -52,6 +53,7 @@ class ScriptDetailActivity : AppCompatActivity() {
     private var isSubmittedMode: Boolean = false  // true=已提交（只可改script），false=未提交（INSERT）
     private var idDetail: String = ""              // 已提交时的主键值
     private var fromDepVet: Boolean = false        // true=从业务待审（dep_vet）列表进入
+    private var idJoinedDep: String = ""           // 该脚本归属的部门 id（用于判断是否本部门）
 
     // 数据库加载的数据
     private var comTitle: String = ""
@@ -75,6 +77,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         const val EXTRA_IS_SUBMITTED = "is_submitted"
         const val EXTRA_ID_DETAIL = "id_detail"
         const val EXTRA_FROM_DEP_VET = "from_dep_vet"
+        const val EXTRA_ID_JOINED_DEP = "id_joined_dep"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,6 +98,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         isSubmittedMode = intent.getBooleanExtra(EXTRA_IS_SUBMITTED, false)
         idDetail = intent.getStringExtra(EXTRA_ID_DETAIL) ?: ""
         fromDepVet = intent.getBooleanExtra(EXTRA_FROM_DEP_VET, false)
+        idJoinedDep = intent.getStringExtra(EXTRA_ID_JOINED_DEP) ?: ""
 
         // 提取最后一位字母作为 id_type
         idType = if (idJoinedList.isNotEmpty()) idJoinedList.last().toString() else ""
@@ -111,6 +115,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         btnSubmit = findViewById(R.id.btn_submit)
         btnAudit = findViewById(R.id.btn_audit)
         progressBar = findViewById(R.id.progress_bar)
+        btnBackBottom = findViewById(R.id.btn_back_bottom)
 
         // dep_vet 业务审核面板
         cardDepVetAudit = findViewById(R.id.card_dep_vet_audit)
@@ -168,6 +173,9 @@ class ScriptDetailActivity : AppCompatActivity() {
         // 提交审核按钮 - UPDATE topical_detail.vet_statue = 1
         btnAudit.setOnClickListener { submitAudit() }
 
+        // 返回按钮 - 仅在“非本部门只读”分支可见
+        btnBackBottom.setOnClickListener { finish() }
+
         // 已提交模式：隐藏保存按钮，仅保留“提交修改”入库
         if (isSubmittedMode) {
             btnSave.visibility = View.GONE
@@ -182,6 +190,23 @@ class ScriptDetailActivity : AppCompatActivity() {
             btnSave.visibility = View.GONE
             btnSubmit.visibility = View.GONE
             btnAudit.visibility = View.GONE
+            btnBackBottom.visibility = View.GONE
+        }
+
+        // 非本部门脚本：隐藏保存/提交/提交审核，仅保留“返回”
+        // （fromDepVet 走审核面板，不进入此分支）
+        if (!fromDepVet && idJoinedDep.isNotEmpty() && idJoinedDep != MyApp.loginDeaprt) {
+            btnSave.visibility = View.GONE
+            btnSubmit.visibility = View.GONE
+            btnAudit.visibility = View.GONE
+            btnBackBottom.visibility = View.VISIBLE
+            etScript.isEnabled = false
+            etScript.setBackgroundColor(0xFFF5F5F5.toInt())
+        } else {
+            btnBackBottom.visibility = View.GONE
+        }
+
+        if (fromDepVet) {
             cardDepVetAudit.visibility = View.VISIBLE
             // dep_vet 模式不修改 script，禁用 script 编辑
             etScript.isEnabled = false

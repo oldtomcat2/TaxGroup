@@ -156,6 +156,10 @@ class MenuAdapter(private val menus: List<MenuItem>) :
                     val intent = android.content.Intent(ctx, ScriptEditActivity::class.java)
                     ctx.startActivity(intent)
                 }
+                "重点选题" -> {
+                    val intent = android.content.Intent(ctx, KeyTopicActivity::class.java)
+                    ctx.startActivity(intent)
+                }
                 "版本更新" -> {
                     UpdateManager.checkForUpdate(ctx)
                 }

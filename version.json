@@ -1,7 +1,7 @@
 {
-  "versionCode": 104,
-  "versionName": "1.0.0-beta5",
-  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta5/app-debug.apk",
-  "changelog": "v1.0.0-beta5 更新：\n选题审核：\n- 部门审核列表新增从 topical_review 表拉取数据\n- 业务部门审核时可查看选题详情并提交审核结果\n- 转业务部门审阅失败时自动回退 vet=0\n- 显示各部门审核状态（待审核/通过/不予通过/非本部门退回）\n脚本列表：\n- 状态标签中文化：Draft→未提交，Submitted→已提交\n选题编辑：\n- 联动部门后可查看该部门已提交的脚本内容\n- 支持单脚本直接打开、多脚本选择后打开\n- 脚本查看页显示类型·部门副标题\n其他：\n- 部门审核状态映射修正",
+  "versionCode": 106,
+  "versionName": "1.0.0-beta7",
+  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta7/app-debug.apk",
+  "changelog": "v1.0.0-beta7 更新：\n1. 脚本详情页附件上传流程优化：选择「提交」后先验证数据库保存成功，再上传附件到七牛，最后更新记录\n2. 新增 App 分享接收功能：支持从微信/其他 App 直接分享文件到脚本详情页（通过 Android Intent 分享机制）\n3. 移除附件区的「上传」按钮，改为提交时统一上传\n4. 七牛云附件上传功能正式上线",
   "forceUpdate": false
 }

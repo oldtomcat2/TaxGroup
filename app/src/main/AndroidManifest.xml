@@ -72,8 +72,21 @@
             android:name=".ScriptEditActivity"
             android:exported="false" />
         <activity
-            android:name=".ScriptDetailActivity"
+            android:name=".WebViewPreviewActivity"
             android:exported="false" />
+        <activity
+            android:name=".KeyTopicActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ScriptDetailActivity"
+            android:exported="true">
+            <!-- 接收微信/其他 App 分享文件 -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ScriptAuditDetailActivity"
             android:exported="false" />

@@ -221,6 +221,98 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 附件卡片（支持 Word / WPS，单个） -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_attachment"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="附件（支持 Word / WPS，单个）"
+                        android:textSize="13sp"
+                        android:textColor="#666666" />
+
+                    <!-- 未选择文件：显示选择按钮 -->
+                    <Button
+                        android:id="@+id/btn_select_attachment"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:layout_marginTop="10dp"
+                        android:text="选择文件"
+                        android:textSize="14sp"
+                        android:textColor="#FFFFFF"
+                        android:background="@drawable/bg_topic_btn_blue" />
+
+                    <!-- 已选择/已上传：显示文件名与操作 -->
+                    <LinearLayout
+                        android:id="@+id/ll_attachment_info"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="10dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tv_attachment_name"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="14sp"
+                            android:textColor="#212121"
+                            android:ellipsize="middle"
+                            android:singleLine="true" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="8dp">
+
+                            <Button
+                                android:id="@+id/btn_preview_attachment"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="6dp"
+                                android:text="预览"
+                                android:textSize="13sp"
+                                android:textColor="#FFFFFF"
+                                android:background="@drawable/bg_topic_btn_gray"
+                                android:visibility="gone" />
+
+                            <Button
+                                android:id="@+id/btn_remove_attachment"
+                                android:layout_width="0dp"
+                                android:layout_height="40dp"
+                                android:layout_weight="1"
+                                android:text="删除"
+                                android:textSize="13sp"
+                                android:textColor="#FFFFFF"
+                                android:background="@drawable/bg_topic_btn_red" />
+                            <!-- 保持原样, 上传按钮已删除 -->
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_attachment"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:layout_gravity="center"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- dep_vet 业务审核面板（默认隐藏） -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_dep_vet_audit"

@@ -14,8 +14,8 @@ android {
         applicationId = "com.oldtomcat.taxgroup"
         minSdk = 24
         targetSdk = 36
-        versionCode = 104
-        versionName = "1.0.0-beta5"
+        versionCode = 106
+        versionName = "1.0.0-beta7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

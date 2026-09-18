@@ -29,3 +29,9 @@ app/release/
 
 # Kotlin error logs
 .kotlin/
+
+# 开发调试临时文件
+app/src/icon/
+export_analyze/
+export_preview/
+

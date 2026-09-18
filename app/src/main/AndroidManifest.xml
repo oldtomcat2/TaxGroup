@@ -78,6 +78,12 @@
             android:name=".KeyTopicActivity"
             android:exported="false" />
         <activity
+            android:name=".WorkUploadActivity"
+            android:exported="false" />
+        <activity
+            android:name=".WorkUploadEditActivity"
+            android:exported="false" />
+        <activity
             android:name=".ScriptDetailActivity"
             android:exported="true">
             <!-- 接收微信/其他 App 分享文件 -->

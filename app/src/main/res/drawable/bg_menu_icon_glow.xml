@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 图标下方柔光（视觉上把图标"抬起来"） -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="48"
+        android:startColor="#80E5C97A"
+        android:endColor="#00E5C97A"
+        android:centerX="0.5"
+        android:centerY="0.5" />
+</shape>

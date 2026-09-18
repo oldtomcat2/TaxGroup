@@ -235,7 +235,7 @@ class KeyTopicActivity : AppCompatActivity() {
 
                             val idDetailPrefix = idJoinedList.take(13)
                             val rsTd = conn.query(
-                                "SELECT id_detail FROM topical_detail WHERE id_detail LIKE '$idDetailPrefix%' AND id_joined_dep = '$escIdDep' LIMIT 1"
+                                "SELECT id_detail, vet_statue FROM topical_detail WHERE id_detail LIKE '$idDetailPrefix%' AND id_joined_dep = '$escIdDep' LIMIT 1"
                             )
                             val tdRows = rsTd.toList()
                             val isSubmitted = tdRows.isNotEmpty()
@@ -243,6 +243,11 @@ class KeyTopicActivity : AppCompatActivity() {
                                 tdRows[0].get(0).toString().removeSurrounding("[", "]").trim()
                             } else {
                                 ""
+                            }
+                            val vetStatue = if (isSubmitted) {
+                                tdRows[0].get(1).toString().toIntOrNull() ?: 0
+                            } else {
+                                0
                             }
 
                             // ★ 关键区别：用 level = 1（不是 level > 1）
@@ -267,7 +272,8 @@ class KeyTopicActivity : AppCompatActivity() {
                                 typeName = typeName,
                                 idDetail = idDetail,
                                 departName = depName,
-                                idJoinedDep = idJoinedDep
+                                idJoinedDep = idJoinedDep,
+                                vetStatue = vetStatue
                             )
 
                             if (isSubmitted) submitted.add(item) else draft.add(item)
@@ -359,6 +365,7 @@ class KeyTopicActivity : AppCompatActivity() {
             val tvScriptTitle: TextView = card.findViewById(R.id.tv_script_title)
             val tvTypeTags: TextView = card.findViewById(R.id.tv_type_tags)
             val tvStatus: TextView = card.findViewById(R.id.tv_status)
+            val tvStatusPassed: TextView = card.findViewById(R.id.tv_status_passed)
         }
 
         override fun getItemViewType(position: Int): Int =
@@ -407,6 +414,16 @@ class KeyTopicActivity : AppCompatActivity() {
                     h.tvStatus.text = "未提交"
                     h.statusIndicator.setBackgroundColor(0xFFFF6F00.toInt())
                     h.tvStatus.setTextColor(0xFFFFFFFF.toInt())
+                }
+
+                // 审核通过标签：vet_statue=1（宣传通过）或 3（业务已审核视为通过）
+                if (item.vetStatue == 1 || item.vetStatue == 3) {
+                    h.tvStatusPassed.text = "已通过"
+                    h.tvStatusPassed.setBackgroundColor(0xFF2E7D32.toInt())
+                    h.tvStatusPassed.setTextColor(0xFFFFFFFF.toInt())
+                    h.tvStatusPassed.visibility = View.VISIBLE
+                } else {
+                    h.tvStatusPassed.visibility = View.GONE
                 }
 
                 h.card.setOnClickListener { onItemClick(item) }

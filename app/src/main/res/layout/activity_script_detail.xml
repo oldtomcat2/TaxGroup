@@ -67,6 +67,20 @@
             android:tint="#FFFFFF" />
     </LinearLayout>
 
+    <!-- 审核通过横幅 -->
+    <TextView
+        android:id="@+id/tv_audit_passed_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#E8F5E9"
+        android:gravity="center"
+        android:padding="10dp"
+        android:text="✓ 此脚本已通过审核"
+        android:textColor="#1B5E20"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <!-- 内容区域 -->
     <ScrollView
         android:layout_width="match_parent"

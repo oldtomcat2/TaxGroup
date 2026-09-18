@@ -78,6 +78,9 @@ class ScriptDetailActivity : AppCompatActivity() {
     private lateinit var btnRemoveAttachment: Button
     private lateinit var pbAttachment: ProgressBar
 
+    // 审核通过横幅
+    private lateinit var tvAuditPassedBanner: TextView
+
     // 从 Intent 传入的参数
     private var idCom: String = ""
     private var idJoined: String = ""
@@ -185,6 +188,7 @@ class ScriptDetailActivity : AppCompatActivity() {
         btnPreviewAttachment = findViewById(R.id.btn_preview_attachment)
         btnRemoveAttachment = findViewById(R.id.btn_remove_attachment)
         pbAttachment = findViewById(R.id.pb_attachment)
+        tvAuditPassedBanner = findViewById(R.id.tv_audit_passed_banner)
 
         btnSelectAttachment.setOnClickListener { pickFileLauncher.launch("*/*") }
         // btnUploadAttachment.setOnClickListener { uploadAttachment() } // 已移除, 提交时统一上传
@@ -336,6 +340,9 @@ class ScriptDetailActivity : AppCompatActivity() {
 
                     // 更新提交审核按钮状态
                     updateAuditButtonState()
+
+                    // 审核通过锁定（顶部横幅 + 脚本不可编辑 + 删除附件不可用）
+                    applyAuditPassedLock()
 
                     isLoading = false
                 }
@@ -755,7 +762,25 @@ class ScriptDetailActivity : AppCompatActivity() {
 
     /** 附件区是否只读：业务审核页(fromDepVet) 或 非本部门脚本 都不可改附件 */
     private fun isAttachmentReadOnly(): Boolean {
-        return fromDepVet || (!fromDepVet && idJoinedDep.isNotEmpty() && idJoinedDep != MyApp.loginDeaprt)
+        return fromDepVet
+            || (!fromDepVet && idJoinedDep.isNotEmpty() && idJoinedDep != MyApp.loginDeaprt)
+            || vetStatue == 1 || vetStatue == 3
+    }
+
+    /** vet=1（宣传通过）或 vet=3（业务已审核视为通过）→ 锁定编辑 */
+    private fun applyAuditPassedLock() {
+        if (vetStatue != 1 && vetStatue != 3) return
+        // 顶部横幅
+        tvAuditPassedBanner.visibility = View.VISIBLE
+        // 脚本内容锁定
+        etScript.isEnabled = false
+        etScript.setBackgroundColor(0xFFF5F5F5.toInt())
+        // 「提交修改」按钮不可用
+        btnSubmit.isEnabled = false
+        btnSubmit.alpha = 0.5f
+        // 附件「删除」按钮不可用
+        btnRemoveAttachment.isEnabled = false
+        btnRemoveAttachment.alpha = 0.5f
     }
 
     /** 选择文件回调 */
@@ -867,17 +892,25 @@ class ScriptDetailActivity : AppCompatActivity() {
         }
     }
 
-    /** 预览附件：用腾讯文档预览打开 */
+    /** 预览附件：按扩展名智能分发，图片直开，Office/PDF 走微软预览 */
     private fun previewAttachment() {
         if (currentAttachmentUrl.isEmpty()) {
             Toast.makeText(this, "暂无附件可预览", Toast.LENGTH_SHORT).show()
             return
         }
-        val encoded = URLEncoder.encode(currentAttachmentUrl, "UTF-8")
-        val previewUrl = "https://docs.qq.com/preview?url=$encoded"
+        val name = currentAttachmentName.ifEmpty { "附件预览" }
+        val ext = currentAttachmentName.substringAfterLast('.', "").lowercase()
+        val previewUrl = when (ext) {
+            "png", "jpg", "jpeg", "gif", "webp", "bmp" -> currentAttachmentUrl
+            "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf" -> {
+                val encoded = URLEncoder.encode(currentAttachmentUrl, "UTF-8")
+                "https://view.officeapps.live.com/op/view.aspx?src=$encoded"
+            }
+            else -> currentAttachmentUrl
+        }
         val intent = Intent(this, WebViewPreviewActivity::class.java)
         intent.putExtra(WebViewPreviewActivity.EXTRA_URL, previewUrl)
-        intent.putExtra(WebViewPreviewActivity.EXTRA_TITLE, currentAttachmentName.ifEmpty { "附件预览" })
+        intent.putExtra(WebViewPreviewActivity.EXTRA_TITLE, name)
         startActivity(intent)
     }
 

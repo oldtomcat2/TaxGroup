@@ -27,6 +27,7 @@ class JointDetailActivity : AppCompatActivity() {
     private lateinit var btnAction2: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var llImportantTypes: LinearLayout
+    private lateinit var llImportantSection: LinearLayout
     private lateinit var llDirectionTypes: LinearLayout
 
     private var idCom: String = ""
@@ -73,7 +74,13 @@ class JointDetailActivity : AppCompatActivity() {
         btnAction2 = findViewById(R.id.btn_action2)
         progressBar = findViewById(R.id.progress_bar)
         llImportantTypes = findViewById(R.id.ll_important_types)
+        llImportantSection = findViewById(R.id.ll_important_section)
         llDirectionTypes = findViewById(R.id.ll_direction_types)
+
+        // 部门级别 <= 2 才显示"重要选题"部分
+        if (MyApp.loginDepLevel > 2) {
+            llImportantSection.visibility = View.GONE
+        }
 
         // 顶部返回
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }

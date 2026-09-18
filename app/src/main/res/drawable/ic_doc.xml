@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+
+    <!-- 文档外框：蓝色折叠角矩形 -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M14,6 L40,6 L52,18 L52,58 L14,58 Z" />
+    <!-- 折角白色 -->
+    <path
+        android:fillColor="#E3F2FD"
+        android:pathData="M40,6 L40,18 L52,18 Z" />
+    <!-- 内容横线 1 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,30 L46,30 L46,33 L20,33 Z" />
+    <!-- 内容横线 2 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,38 L46,38 L46,41 L20,41 Z" />
+    <!-- 内容横线 3 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M20,46 L36,46 L36,49 L20,49 Z" />
+    <!-- 文字 "W"（表示 Word/文档） -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M22,12 L24,12 L26,16 L28,12 L30,12 L26.5,18 L25.5,18 Z" />
+</vector>

@@ -4,31 +4,44 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="12dp">
+    android:paddingTop="16dp"
+    android:paddingBottom="14dp"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp">
 
-    <!-- 图标：无背景圆形，直接显示在仙境背景上 -->
-    <ImageView
-        android:id="@+id/iv_icon"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:contentDescription="图标"
-        android:elevation="4dp" />
+    <!-- 图标圆形容器：白底 + 金色描边圆环，立体感 -->
+    <FrameLayout
+        android:id="@+id/fl_icon_container"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:background="@drawable/bg_menu_icon_circle"
+        android:elevation="6dp">
 
-    <!-- 菜单名称：金色文字 -->
+        <ImageView
+            android:id="@+id/iv_icon"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_gravity="center"
+            android:contentDescription="图标"
+            android:elevation="4dp" />
+    </FrameLayout>
+
+    <!-- 菜单名称：金色 + 阴影 -->
     <TextView
         android:id="@+id/tv_menu_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="13sp"
-        android:textColor="#E5C97A"
+        android:layout_marginTop="12dp"
+        android:textSize="15sp"
+        android:textColor="#FFE5C97A"
         android:textStyle="bold"
         android:gravity="center"
-        android:shadowColor="#80000000"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="2"
+        android:shadowColor="#B3000000"
+        android:shadowDx="0"
+        android:shadowDy="2"
+        android:shadowRadius="3"
         android:maxLines="2"
-        android:ellipsize="end" />
+        android:ellipsize="end"
+        android:lineSpacingMultiplier="1.1" />
 
 </LinearLayout>

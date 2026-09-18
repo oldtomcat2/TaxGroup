@@ -42,7 +42,8 @@ data class ScriptItem(
     val typeName: String?,
     val idDetail: String = "",
     val departName: String = "",
-    val idJoinedDep: String = ""
+    val idJoinedDep: String = "",
+    val vetStatue: Int = 0
 )
 
 class ScriptEditActivity : AppCompatActivity() {
@@ -323,7 +324,7 @@ class ScriptEditActivity : AppCompatActivity() {
         }.start()
     }
 
-    private fun buildFlatList() {
+    private fun buildFlatList  () {
         flatList.clear()
 
         val sourceItems = when (currentFilter) {

@@ -26,6 +26,7 @@ class TopicAddActivity : AppCompatActivity() {
     private lateinit var etTitle: EditText
     private lateinit var etContent: EditText
     private lateinit var llImportantTypes: LinearLayout
+    private lateinit var llImportantSection: LinearLayout
     private lateinit var llDirectionTypes: LinearLayout
 
     // 复选框 (topical_type, type_name)
@@ -45,7 +46,13 @@ class TopicAddActivity : AppCompatActivity() {
         etTitle = findViewById(R.id.et_title)
         etContent = findViewById(R.id.et_content)
         llImportantTypes = findViewById(R.id.ll_important_types)
+        llImportantSection = findViewById(R.id.ll_important_section)
         llDirectionTypes = findViewById(R.id.ll_direction_types)
+
+        // 部门级别 <= 2 才显示"重要选题"部分
+        if (MyApp.loginDepLevel > 2) {
+            llImportantSection.visibility = View.GONE
+        }
 
         // 返回
         findViewById<View>(R.id.btn_back).setOnClickListener { finish() }

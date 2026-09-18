@@ -1,7 +1,7 @@
 {
-  "versionCode": 106,
-  "versionName": "1.0.0-beta7",
-  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta7/app-debug.apk",
-  "changelog": "v1.0.0-beta7 更新：\n1. 脚本详情页附件上传流程优化：选择「提交」后先验证数据库保存成功，再上传附件到七牛，最后更新记录\n2. 新增 App 分享接收功能：支持从微信/其他 App 直接分享文件到脚本详情页（通过 Android Intent 分享机制）\n3. 移除附件区的「上传」按钮，改为提交时统一上传\n4. 七牛云附件上传功能正式上线",
+  "versionCode": 107,
+  "versionName": "1.0.0-beta8",
+  "apkUrl": "https://gitee.com/oldtomcat/TaxGroup/releases/download/v1.0.0-beta8/app-debug.apk",
+  "changelog": "v1.0.0-beta8 更新：\n1. 新增作品上传功能：作者对已通过脚本上传最终作品（标题+附件），vet=6 标记\n2. 预览按钮智能分发：图片直接打开、Office/PDF 走微软在线预览\n3. 脚本审核详情页增加附件预览卡\n4. KeyTopicActivity 列表显示「已通过」标签（vet=1/3）\n5. 选题/联动页「重要选题」按部门级别隐藏（loginDepLevel>2）\n6. 主菜单图标升级为 7 张中国风水墨风格\n7. 主菜单卡片立体美化（白底+金色描边+大圆角+阴影）\n8. 作者端审核通过锁定（vet=1/3 禁止编辑+附件删除）",
   "forceUpdate": false
 }

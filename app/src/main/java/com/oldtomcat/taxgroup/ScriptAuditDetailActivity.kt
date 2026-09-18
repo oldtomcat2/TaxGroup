@@ -1,6 +1,7 @@
 package com.oldtomcat.taxgroup
 
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
@@ -51,6 +52,13 @@ class ScriptAuditDetailActivity : AppCompatActivity() {
     private lateinit var btnSubmit: Button
     private lateinit var btnBack: View
     private lateinit var progressBar: ProgressBar
+
+    // 附件预览卡
+    private lateinit var cardAttachment: MaterialCardView
+    private lateinit var tvAttachmentNameAudit: TextView
+    private lateinit var btnPreviewAttachmentAudit: Button
+    private var currentAttachmentUrl: String = ""
+    private var currentAttachmentName: String = ""
     
     // 业务审核情况组（vet=3 时显示）
     private lateinit var cardBusinessAudit: MaterialCardView
@@ -126,6 +134,11 @@ class ScriptAuditDetailActivity : AppCompatActivity() {
         btnSubmit = findViewById(R.id.btn_submit)
         btnBack = findViewById(R.id.btn_back)
         progressBar = findViewById(R.id.progress_bar)
+
+        cardAttachment = findViewById(R.id.card_attachment)
+        tvAttachmentNameAudit = findViewById(R.id.tv_attachment_name_audit)
+        btnPreviewAttachmentAudit = findViewById(R.id.btn_preview_attachment_audit)
+        btnPreviewAttachmentAudit.setOnClickListener { previewAttachmentAudit() }
         
         // 业务审核情况组（动态创建或从布局找）
         cardBusinessAudit = findViewById(R.id.card_business_audit) ?: createBusinessAuditCard()
@@ -230,7 +243,7 @@ class ScriptAuditDetailActivity : AppCompatActivity() {
                     if (idDetail.isNotEmpty()) {
                         val escIdDetail = idDetail.replace("'", "''")
                         val rs = conn.query(
-                            "SELECT id_Editer_user, script, vet_statue FROM topical_detail " +
+                            "SELECT id_Editer_user, script, vet_statue, attachment_url, attachment_name FROM topical_detail " +
                                 "WHERE id_detail = '$escIdDetail' LIMIT 1"
                         )
                         val rows = rs.toList()
@@ -240,6 +253,8 @@ class ScriptAuditDetailActivity : AppCompatActivity() {
                             scriptContent = if (scriptVal == "null" || scriptVal.isEmpty()) "" else scriptVal
                             val vetVal = rows[0].get(2).toString().removeSurrounding("[", "]")
                             currentVetStatus = vetVal.toIntOrNull() ?: 0
+                            currentAttachmentUrl = rows[0].get(3).toString().removeSurrounding("[", "]").let { if (it == "null") "" else it }
+                            currentAttachmentName = rows[0].get(4).toString().removeSurrounding("[", "]").let { if (it == "null") "" else it }
                         }
                     }
 
@@ -348,6 +363,14 @@ class ScriptAuditDetailActivity : AppCompatActivity() {
                         tvComTitle.text = comTitle.ifEmpty { "[无标题]" }
                         tvTypeName.text = if (typeName.isNotEmpty()) typeName else "[无类型]"
                         etScript.setText(scriptContent)
+
+                        // 附件预览卡：有附件时显示文件名 + 预览按钮
+                        if (currentAttachmentUrl.isNotEmpty()) {
+                            tvAttachmentNameAudit.text = if (currentAttachmentName.isNotEmpty()) currentAttachmentName else currentAttachmentUrl
+                            cardAttachment.visibility = View.VISIBLE
+                        } else {
+                            cardAttachment.visibility = View.GONE
+                        }
 
                         // 回填审核状态单选
                         when (currentVetStatus) {
@@ -578,5 +601,27 @@ class ScriptAuditDetailActivity : AppCompatActivity() {
     private fun setButtonsEnabled(enabled: Boolean) {
         btnSave.isEnabled = enabled
         btnSubmit.isEnabled = enabled
+    }
+
+    /** 按扩展名智能分发：图片直开，Office/PDF 走微软预览，其他直接打开 */
+    private fun previewAttachmentAudit() {
+        if (currentAttachmentUrl.isEmpty()) {
+            android.widget.Toast.makeText(this, "暂无附件可预览", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val name = currentAttachmentName.ifEmpty { currentAttachmentUrl }
+        val ext = name.substringAfterLast('.', "").lowercase()
+        val previewUrl = when (ext) {
+            "png", "jpg", "jpeg", "gif", "webp", "bmp" -> currentAttachmentUrl
+            "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf" -> {
+                val encoded = java.net.URLEncoder.encode(currentAttachmentUrl, "UTF-8")
+                "https://view.officeapps.live.com/op/view.aspx?src=$encoded"
+            }
+            else -> currentAttachmentUrl
+        }
+        val intent = Intent(this, WebViewPreviewActivity::class.java)
+        intent.putExtra(WebViewPreviewActivity.EXTRA_URL, previewUrl)
+        intent.putExtra(WebViewPreviewActivity.EXTRA_TITLE, name)
+        startActivity(intent)
     }
 }

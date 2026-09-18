@@ -2,6 +2,8 @@
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -117,16 +119,28 @@ class MenuAdapter(private val menus: List<MenuItem>) :
     class VH(val card: MaterialCardView) : RecyclerView.ViewHolder(card)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val density = parent.resources.displayMetrics.density
         val card = MaterialCardView(parent.context).apply {
             layoutParams = GridLayoutManager.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(8, 8, 8, 8)
+                // 卡片间距放大，更舒展
+                setMargins(
+                    (12 * density).toInt(),
+                    (12 * density).toInt(),
+                    (12 * density).toInt(),
+                    (12 * density).toInt()
+                )
             }
-            radius = 16f
-            cardElevation = 2f
-            setCardBackgroundColor(0xFFFFFFFF.toInt())
+            // 立体感：白色半透 + 金色描边 + 大圆角 + 阴影
+            radius = 28f * density                         // 28dp 圆角
+            cardElevation = 10f * density                  // 10dp 立体阴影
+            // 白色 60% alpha 背景，明显从水墨背景"浮"出来
+            setCardBackgroundColor(0x99FFFFFF.toInt())
+            // 金色 80% alpha 描边
+            strokeWidth = (2 * density).toInt()
+            setStrokeColor(ColorStateList.valueOf(0xCCE5C97A.toInt()))
         }
         return VH(card)
     }
@@ -158,6 +172,10 @@ class MenuAdapter(private val menus: List<MenuItem>) :
                 }
                 "重点选题" -> {
                     val intent = android.content.Intent(ctx, KeyTopicActivity::class.java)
+                    ctx.startActivity(intent)
+                }
+                "作品上传" -> {
+                    val intent = android.content.Intent(ctx, WorkUploadActivity::class.java)
                     ctx.startActivity(intent)
                 }
                 "版本更新" -> {
